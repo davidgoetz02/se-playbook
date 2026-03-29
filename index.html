@@ -80,11 +80,41 @@ textarea{resize:vertical;line-height:1.5}
 const {useState,useEffect,useRef,useCallback}=React;
 const SB="https://xashkjovtidhgmqmthvy.supabase.co";
 const SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhhc2hram92dGlkaGdtcW10aHZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MDA5MzQsImV4cCI6MjA5MDM3NjkzNH0.brfdv_UAXcok6VuM8-Hd7zCueg04dzFi-U4yyfQ8lJo";
-const HDR={apikey:SK,Authorization:`Bearer ${SK}`,"Content-Type":"application/json"};
-async function sbGet(t,f=""){const r=await fetch(`${SB}/rest/v1/${t}${f?`?${f}`:""}`,{headers:HDR});return r.json();}
-async function sbPatch(t,f,b){await fetch(`${SB}/rest/v1/${t}?${f}`,{method:"PATCH",headers:{...HDR,Prefer:"return=minimal"},body:JSON.stringify(b)});}
-async function sbPost(t,b){const r=await fetch(`${SB}/rest/v1/${t}`,{method:"POST",headers:{...HDR,Prefer:"return=representation"},body:JSON.stringify(b)});return r.json();}
-async function sbDel(t,f){await fetch(`${SB}/rest/v1/${t}?${f}`,{method:"DELETE",headers:HDR});}
+
+// --- Session helpers ---
+function getSession(){try{const s=localStorage.getItem("sep_session");return s?JSON.parse(s):null;}catch{return null;}}
+function saveSession(s){localStorage.setItem("sep_session",JSON.stringify(s));}
+function clearSession(){localStorage.removeItem("sep_session");}
+
+// --- Backend API helper (all auth goes via Vercel serverless) ---
+async function api(action,payload){
+  const session=getSession();
+  const token=session?.token||null;
+  const r=await fetch("/api/analyse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,payload,token})});
+  const data=await r.json();
+  if(r.status===401&&token){
+    // Try to refresh
+    const session2=getSession();
+    if(session2?.refresh_token){
+      const rr=await fetch("/api/analyse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"refresh",payload:{refresh_token:session2.refresh_token},token:null})});
+      if(rr.ok){const rd=await rr.json();saveSession({...session2,token:rd.token,refresh_token:rd.refresh_token});return api(action,payload);}
+    }
+    clearSession();window.location.reload();
+  }
+  return {status:r.status,data};
+}
+
+// --- Auth ---
+async function authSignIn(email,password){return api("signin",{email,password});}
+async function authChangePw(new_password){return api("change_password",{new_password});}
+
+// --- Supabase data helpers (use JWT token for RLS) ---
+function authHDR(){const s=getSession();const tok=s?.token||SK;return{apikey:SK,Authorization:`Bearer ${tok}`,"Content-Type":"application/json"};}
+async function sbGet(t,f=""){const r=await fetch(`${SB}/rest/v1/${t}${f?`?${f}`:""}`,{headers:authHDR()});return r.json();}
+async function sbPatch(t,f,b){await fetch(`${SB}/rest/v1/${t}?${f}`,{method:"PATCH",headers:{...authHDR(),Prefer:"return=minimal"},body:JSON.stringify(b)});}
+async function sbPost(t,b){const r=await fetch(`${SB}/rest/v1/${t}`,{method:"POST",headers:{...authHDR(),Prefer:"return=representation"},body:JSON.stringify(b)});return r.json();}
+async function sbDel(t,f){await fetch(`${SB}/rest/v1/${t}?${f}`,{method:"DELETE",headers:authHDR()});}
+
 async function dbGetInitiatives(){const r=await sbGet("playbook","id=eq.initiatives&select=data");return r?.[0]?.data||{list:[]};}
 async function dbSetInitiatives(d){await sbPatch("playbook","id=eq.initiatives",{data:d,updated_at:new Date().toISOString()});}
 async function dbGetState(iid){const r=await sbGet("playbook",`id=eq.initiative:${iid}&select=data`);return r?.[0]?.data||null;}
@@ -93,14 +123,14 @@ async function dbSetState(iid,d){
   if(r&&r.length>0){await sbPatch("playbook",`id=eq.initiative:${iid}`,{data:d,updated_at:new Date().toISOString()});}
   else{await sbPost("playbook",{id:`initiative:${iid}`,data:d});}
 }
-async function dbGetUsers(){return sbGet("playbook_users","select=username,role");}
 async function dbGetConfig(){return sbGet("playbook_config","select=key,value");}
 async function dbSetConfig(k,v){await sbPatch("playbook_config",`key=eq.${k}`,{value:v,updated_at:new Date().toISOString()});}
-async function dbAddUser(u,p,r){return sbPost("playbook_users",{username:u,password_hash:p,role:r});}
-async function dbDelUser(u){return sbDel("playbook_users",`username=eq.${u}`);}
-async function dbSetPw(u,p){await sbPatch("playbook_users",`username=eq.${u}`,{password_hash:p});}
-async function dbVerify(u,p){const r=await sbGet("playbook_users",`username=eq.${encodeURIComponent(u)}&select=username,password_hash,role`);if(!r||!r.length)return null;const x=r[0];return x.password_hash===p?{username:x.username,role:x.role}:null;}
-async function dbSetRecovery(u,code){await sbPatch("playbook_users",`username=eq.${u}`,{password_hash:`RESET:${code}`});}
+
+// --- User management (via secure backend) ---
+async function dbGetUsers(){const r=await api("list_users",{});return r.data?.users||[];}
+async function dbAddUser(username,password,role,email){return api("create_user",{username,password,role,email});}
+async function dbDelUser(userId){return api("delete_user",{user_id:userId});}
+async function dbResetPw(userId,new_password){return api("reset_password",{user_id:userId,new_password});}
 
 const DEF_CFG={statuses:["Not Started","Collecting","In Progress","In Cleanup","Done","Blocked"],priorities:["P1","P2","P3"],owners:["David","Steven","Stefan","Tom"],action_statuses:["Urgent","In Progress","Scheduled","Committed","Decision Needed","Done"]};
 const SS_F={Done:{bg:"#EAF3DE",text:"#3B6D11",border:"#97C459"},"In Progress":{bg:"#E6F1FB",text:"#185FA5",border:"#85B7EB"},"In Cleanup":{bg:"#FAEEDA",text:"#633806",border:"#EF9F27"},"Not Started":{bg:"#F1EFE8",text:"#5F5E5A",border:"#B4B2A9"},Blocked:{bg:"#FCEBEB",text:"#A32D2D",border:"#F09595"},Collecting:{bg:"#EEEDFE",text:"#3C3489",border:"#AFA9EC"}};
@@ -201,50 +231,31 @@ function AppBackground(){
 
 // --- Login ---
 function LoginScreen({onLogin}){
-  const [view,setView]=useState("login");
-  const [uname,setUname]=useState("");const [pw,setPw]=useState("");
-  const [newPw,setNewPw]=useState("");const [confirmPw,setConfirmPw]=useState("");
-  const [resetCode,setResetCode]=useState("");const [generatedCode,setGeneratedCode]=useState("");
-  const [err,setErr]=useState("");const [ok,setOk]=useState("");const [loading,setLoading]=useState(false);
-  async function login(e){e.preventDefault();if(!uname||!pw){setErr("Please enter your name and password.");return;}setLoading(true);setErr("");const user=await dbVerify(uname,pw);setLoading(false);if(!user){setErr("Incorrect name or password.");return;}sessionStorage.setItem("sep_user",JSON.stringify(user));onLogin(user);}
-  async function requestReset(e){e.preventDefault();if(!uname){setErr("Please enter your name.");return;}setLoading(true);setErr("");const rows=await sbGet("playbook_users",`username=eq.${encodeURIComponent(uname)}&select=username`);setLoading(false);if(!rows||!rows.length){setErr("No account found with that name.");return;}const code=Math.floor(100000+Math.random()*900000).toString();await dbSetRecovery(uname,code);setGeneratedCode(code);setView("reset");}
-  async function doReset(e){e.preventDefault();if(!resetCode){setErr("Please enter the reset code.");return;}if(newPw.length<6){setErr("New password must be at least 6 characters.");return;}if(newPw!==confirmPw){setErr("Passwords do not match.");return;}setLoading(true);setErr("");const rows=await sbGet("playbook_users",`username=eq.${encodeURIComponent(uname)}&select=username,password_hash`);setLoading(false);if(!rows||!rows.length){setErr("User not found.");return;}if(rows[0].password_hash!==`RESET:${resetCode}`){setErr("Incorrect reset code.");return;}await dbSetPw(uname,newPw);setOk("Password reset successfully!");setView("login");setPw("");}
+  const [email,setEmail]=useState("");const [pw,setPw]=useState("");
+  const [err,setErr]=useState("");const [loading,setLoading]=useState(false);
+  async function login(e){
+    e.preventDefault();
+    if(!email||!pw){setErr("Please enter your email and password.");return;}
+    setLoading(true);setErr("");
+    const r=await authSignIn(email,pw);
+    setLoading(false);
+    if(r.status!==200||!r.data?.token){setErr(r.data?.error||"Incorrect email or password.");return;}
+    saveSession({token:r.data.token,refresh_token:r.data.refresh_token,user:r.data.user});
+    onLogin(r.data.user);
+  }
   return(
     <div className="login-wrap">
       <AppBackground/>
       <div className="login-box" style={{position:"relative",zIndex:1,boxShadow:"0 4px 32px rgba(0,0,0,0.12)"}}>
         <h1>SE Team Project Planner</h1>
         <p className="sub">Intact Solution Engineering</p>
-        {view==="login"&&<>
-          {err&&<div className="err-msg">{err}</div>}
-          {ok&&<div className="ok-msg">{ok}</div>}
-          <form onSubmit={login}>
-            <div className="form-group"><label>Your name</label><input value={uname} onChange={e=>setUname(e.target.value)} placeholder="e.g. David" autoFocus/></div>
-            <div className="form-group"><label>Password</label><input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="Enter your password"/></div>
-            <button type="submit" className="btn-p" style={{width:"100%",marginTop:8}} disabled={loading}>{loading?"Signing in…":"Sign in →"}</button>
-          </form>
-          <div style={{textAlign:"center",marginTop:14}}><button onClick={()=>{setView("forgot");setErr("");setOk("");}} style={{background:"none",border:"none",fontSize:12,color:"var(--ts)",textDecoration:"underline",cursor:"pointer"}}>Forgot password?</button></div>
-        </>}
-        {view==="forgot"&&<>
-          <div style={{marginBottom:12}}><button onClick={()=>{setView("login");setErr("");}} style={{background:"none",border:"none",fontSize:12,color:"var(--ts)",cursor:"pointer"}}>← Back</button></div>
-          <p>Enter your name to generate a reset code to share with your admin.</p>
-          {err&&<div className="err-msg">{err}</div>}
-          <form onSubmit={requestReset}>
-            <div className="form-group"><label>Your name</label><input value={uname} onChange={e=>setUname(e.target.value)} placeholder="e.g. Steven" autoFocus/></div>
-            <button type="submit" className="btn-p" style={{width:"100%"}} disabled={loading}>{loading?"Generating…":"Generate reset code"}</button>
-          </form>
-        </>}
-        {view==="reset"&&<>
-          <div style={{marginBottom:12}}><button onClick={()=>{setView("login");setErr("");}} style={{background:"none",border:"none",fontSize:12,color:"var(--ts)",cursor:"pointer"}}>← Back</button></div>
-          {generatedCode&&<div style={{background:"#FAEEDA",border:"1px solid #EF9F27",borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:13,color:"#633806"}}><div style={{fontWeight:500,marginBottom:4}}>Reset code generated</div><div>Code: <strong style={{fontSize:16,letterSpacing:2}}>{generatedCode}</strong></div><div style={{fontSize:11,marginTop:4}}>Share this with {uname} — single use.</div></div>}
-          {err&&<div className="err-msg">{err}</div>}
-          <form onSubmit={doReset}>
-            <div className="form-group"><label>Reset code</label><input value={resetCode} onChange={e=>setResetCode(e.target.value)} placeholder="6-digit code"/></div>
-            <div className="form-group"><label>New password</label><input type="password" value={newPw} onChange={e=>setNewPw(e.target.value)} placeholder="At least 6 characters"/></div>
-            <div className="form-group"><label>Confirm new password</label><input type="password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)}/></div>
-            <button type="submit" className="btn-p" style={{width:"100%"}} disabled={loading}>{loading?"Resetting…":"Reset password"}</button>
-          </form>
-        </>}
+        {err&&<div className="err-msg">{err}</div>}
+        <form onSubmit={login}>
+          <div className="form-group"><label>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com" autoFocus/></div>
+          <div className="form-group"><label>Password</label><input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="Enter your password"/></div>
+          <button type="submit" className="btn-p" style={{width:"100%",marginTop:8}} disabled={loading}>{loading?"Signing in…":"Sign in →"}</button>
+        </form>
+        <div style={{textAlign:"center",marginTop:14,fontSize:12,color:"var(--ts)"}}>Forgot your password? Contact David to reset it.</div>
       </div>
     </div>
   );
@@ -252,18 +263,27 @@ function LoginScreen({onLogin}){
 
 // --- Change Password Modal ---
 function ChangePwModal({user,onClose}){
-  const [cur,setCur]=useState("");const [nw,setNw]=useState("");const [conf,setConf]=useState("");
+  const [nw,setNw]=useState("");const [conf,setConf]=useState("");
   const [err,setErr]=useState("");const [ok,setOk]=useState(false);const [loading,setLoading]=useState(false);
-  async function submit(e){e.preventDefault();if(!cur||!nw||!conf){setErr("Please fill in all fields.");return;}if(nw.length<6){setErr("New password must be at least 6 characters.");return;}if(nw!==conf){setErr("Passwords do not match.");return;}setLoading(true);setErr("");const verified=await dbVerify(user.username,cur);if(!verified){setLoading(false);setErr("Current password is incorrect.");return;}await dbSetPw(user.username,nw);setLoading(false);setOk(true);setTimeout(()=>onClose(true),1500);}
+  async function submit(e){
+    e.preventDefault();
+    if(!nw||!conf){setErr("Please fill in both fields.");return;}
+    if(nw.length<6){setErr("New password must be at least 6 characters.");return;}
+    if(nw!==conf){setErr("Passwords do not match.");return;}
+    setLoading(true);setErr("");
+    const r=await authChangePw(nw);
+    setLoading(false);
+    if(r.status!==200){setErr(r.data?.error||"Failed to change password.");return;}
+    setOk(true);setTimeout(()=>onClose(true),1500);
+  }
   return(
     <div className="modal-bg" onClick={e=>{if(e.target===e.currentTarget)onClose(false);}}>
       <div className="modal" style={{maxWidth:400}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><h2 style={{marginBottom:0}}>Change password</h2><button onClick={()=>onClose(false)} style={{background:"none",border:"none",fontSize:20,color:"var(--tt)",lineHeight:1}}>×</button></div>
-        {ok?<div className="ok-msg">Password changed successfully!</div>:<>
+        {ok?<div className="ok-msg">Password changed! Please sign in again.</div>:<>
           {err&&<div className="err-msg">{err}</div>}
           <form onSubmit={submit}>
-            <div className="form-group"><label>Current password</label><input type="password" value={cur} onChange={e=>setCur(e.target.value)} autoFocus/></div>
-            <div className="form-group"><label>New password</label><input type="password" value={nw} onChange={e=>setNw(e.target.value)} placeholder="At least 6 characters"/></div>
+            <div className="form-group"><label>New password</label><input type="password" value={nw} onChange={e=>setNw(e.target.value)} placeholder="At least 6 characters" autoFocus/></div>
             <div className="form-group"><label>Confirm new password</label><input type="password" value={conf} onChange={e=>setConf(e.target.value)}/></div>
             <div className="btn-row"><button type="button" className="btn-s" onClick={()=>onClose(false)}>Cancel</button><button type="submit" className="btn-p" disabled={loading}>{loading?"Saving…":"Save password"}</button></div>
           </form>
@@ -557,7 +577,7 @@ function MyTodos({user,allInitData,cfg,onUpdate}){
 // --- Admin Panel ---
 function AdminPanel({cfg,setCfg,initiatives,setInitiatives}){
   const [users,setUsers]=useState([]);const [loading,setLoading]=useState(true);
-  const [newUser,setNewUser]=useState({username:"",password:"",role:"member"});
+  const [newUser,setNewUser]=useState({username:"",email:"",password:"",role:"member"});
   const [newPw,setNewPw]=useState({});const [msg,setMsg]=useState({text:"",type:"ok"});
   const [lc,setLc]=useState(cfg);const [addVals,setAddVals]=useState({statuses:"",priorities:"",owners:"",action_statuses:""});
   const [editInit,setEditInit]=useState(null);
@@ -565,9 +585,22 @@ function AdminPanel({cfg,setCfg,initiatives,setInitiatives}){
   const COLORS=["#378ADD","#1D9E75","#7F77DD","#D85A30","#BA7517","#D4537E","#0F6E56","#E24B4A"];
   useEffect(()=>{dbGetUsers().then(u=>{setUsers(u||[]);setLoading(false);});},[]);
   function flash(text,type="ok"){setMsg({text,type});setTimeout(()=>setMsg({text:"",type:"ok"}),3500);}
-  async function addUser(){if(!newUser.username||!newUser.password){flash("Please fill in name and password.","err");return;}await dbAddUser(newUser.username,newUser.password,newUser.role);const u=await dbGetUsers();setUsers(u||[]);setNewUser({username:"",password:"",role:"member"});flash(`User "${newUser.username}" added.`);}
-  async function delUser(u){if(!confirm(`Remove user "${u}"?`))return;await dbDelUser(u);const us=await dbGetUsers();setUsers(us||[]);flash(`User "${u}" removed.`);}
-  async function updPw(u){const p=newPw[u];if(!p)return;await dbSetPw(u,p);setNewPw(prev=>({...prev,[u]:""}));flash(`Password updated for "${u}".`);}
+  async function addUser(){
+    if(!newUser.username||!newUser.email||!newUser.password){flash("Please fill in name, email and password.","err");return;}
+    const r=await dbAddUser(newUser.username,newUser.password,newUser.role,newUser.email);
+    if(r.status!==200){flash(r.data?.error||"Failed to add user.","err");return;}
+    const u=await dbGetUsers();setUsers(u||[]);setNewUser({username:"",email:"",password:"",role:"member"});flash(`User "${newUser.username}" added.`);
+  }
+  async function delUser(userId,username){
+    if(!confirm(`Remove user "${username}"?`))return;
+    await dbDelUser(userId);const us=await dbGetUsers();setUsers(us||[]);flash(`User "${username}" removed.`);
+  }
+  async function updPw(userId,username){
+    const p=newPw[userId];if(!p)return;
+    const r=await dbResetPw(userId,p);
+    if(r.status!==200){flash(r.data?.error||"Failed to reset password.","err");return;}
+    setNewPw(prev=>({...prev,[userId]:""}));flash(`Password updated for "${username}".`);
+  }
   async function saveCfg(){await Promise.all(Object.keys(lc).map(k=>dbSetConfig(k,lc[k])));setCfg(lc);flash("Configuration saved.");}
   function addToList(key){const v=addVals[key].trim();if(!v)return;setLc(c=>({...c,[key]:[...c[key],v]}));setAddVals(p=>({...p,[key]:""}));}
   function rmFromList(key,i){setLc(c=>({...c,[key]:c[key].filter((_,j)=>j!==i)}));}
@@ -657,16 +690,17 @@ function AdminPanel({cfg,setCfg,initiatives,setInitiatives}){
     </div>
     <div className="admin-section">
       <h3>Team members</h3>
-      {loading?<Spinner size={24}/>:users.map(u=>(<div key={u.username} className="user-row">
-        <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:120}}><div style={{width:28,height:28,borderRadius:"50%",background:oc(u.username,[])+"22",border:`1.5px solid ${oc(u.username,[])}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,color:oc(u.username,[])}}>{u.username[0]}</div><span style={{fontSize:13,fontWeight:500}}>{u.username}</span><span className="pill" style={{fontSize:10,background:u.role==="admin"?"#FAEEDA":"#F1EFE8",color:u.role==="admin"?"#633806":"#5F5E5A"}}>{u.role}</span></div>
-        <input type="password" value={newPw[u.username]||""} onChange={e=>setNewPw(p=>({...p,[u.username]:e.target.value}))} placeholder="New password" style={{width:140,fontSize:12}}/>
-        <button className="btn-p" style={{fontSize:11,padding:"4px 10px"}} onClick={()=>updPw(u.username)}>Update</button>
-        {u.role!=="admin"&&<button className="btn-d" onClick={()=>delUser(u.username)}>Remove</button>}
+      {loading?<Spinner size={24}/>:users.map(u=>(<div key={u.id} className="user-row">
+        <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:120}}><div style={{width:28,height:28,borderRadius:"50%",background:oc(u.username,[])+"22",border:`1.5px solid ${oc(u.username,[])}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,color:oc(u.username,[])}}>{u.username[0]}</div><div><span style={{fontSize:13,fontWeight:500}}>{u.username}</span><div style={{fontSize:11,color:"var(--ts)"}}>{u.email||""}</div></div><span className="pill" style={{fontSize:10,background:u.role==="admin"?"#FAEEDA":"#F1EFE8",color:u.role==="admin"?"#633806":"#5F5E5A"}}>{u.role}</span></div>
+        <input type="password" value={newPw[u.id]||""} onChange={e=>setNewPw(p=>({...p,[u.id]:e.target.value}))} placeholder="New password" style={{width:140,fontSize:12}}/>
+        <button className="btn-p" style={{fontSize:11,padding:"4px 10px"}} onClick={()=>updPw(u.id,u.username)}>Reset pw</button>
+        {u.role!=="admin"&&<button className="btn-d" onClick={()=>delUser(u.id,u.username)}>Remove</button>}
       </div>))}
       <div style={{marginTop:14,padding:12,background:"var(--bs)",borderRadius:8}}>
         <div style={{fontSize:12,fontWeight:500,marginBottom:8}}>Add new user</div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          <input value={newUser.username} onChange={e=>setNewUser(p=>({...p,username:e.target.value}))} placeholder="Name" style={{flex:1,minWidth:100,fontSize:12}}/>
+          <input value={newUser.username} onChange={e=>setNewUser(p=>({...p,username:e.target.value}))} placeholder="Display name" style={{flex:1,minWidth:100,fontSize:12}}/>
+          <input type="email" value={newUser.email} onChange={e=>setNewUser(p=>({...p,email:e.target.value}))} placeholder="Email address" style={{flex:2,minWidth:160,fontSize:12}}/>
           <input type="password" value={newUser.password} onChange={e=>setNewUser(p=>({...p,password:e.target.value}))} placeholder="Password" style={{flex:1,minWidth:100,fontSize:12}}/>
           <Sel value={newUser.role} options={["member","admin"]} onChange={v=>setNewUser(p=>({...p,role:v}))} small/>
           <button className="btn-p" style={{fontSize:12,padding:"5px 14px"}} onClick={addUser}>Add</button>
@@ -749,7 +783,7 @@ function App(){
   const [view,setView]=useState("picker"); // picker | initiative | admin
   const timer=useRef(null);
 
-  useEffect(()=>{const s=sessionStorage.getItem("sep_user");if(s){try{setUser(JSON.parse(s));}catch(e){}}setAppLoaded(true);},[]);
+  useEffect(()=>{const s=getSession();if(s?.user){setUser(s.user);}setAppLoaded(true);},[]);
 
   useEffect(()=>{
     if(!user)return;
@@ -780,7 +814,7 @@ function App(){
 
   const setSections=v=>{setSectionsRaw(v);if(selectedInit)persist(selectedInit.id,v,actions);};
   const setActions=v=>{setActionsRaw(v);if(selectedInit)persist(selectedInit.id,sections,v);};
-  function logout(){sessionStorage.removeItem("sep_user");setUser(null);setSelectedInit(null);setView("picker");}
+  function logout(){clearSession();setUser(null);setSelectedInit(null);setView("picker");}
 
   if(!appLoaded)return null;
   if(!user)return <LoginScreen onLogin={u=>setUser(u)}/>;
