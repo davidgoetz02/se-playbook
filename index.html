@@ -369,7 +369,7 @@ function SprintModal({sections,actions,owners,onApply,onClose}){
     setErr("");setStage("thinking");
     const state=JSON.stringify({sections:sections.map(s=>({num:s.num,title:s.title,owner:s.owner,status:s.status,flag:s.flag,tasks:s.tasks})),actions:actions.map(a=>({id:a.id,owner:a.owner,action:a.action,due:a.due,status:a.status,type:a.type}))});
     try{
-      const res=await fetch("/api/analyse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4000,system:AI_SYS,messages:[{role:"user",content:`CURRENT STATE:\n${state}\n\nSPRINT TRANSCRIPT:\n${text}\n\nReturn ONLY the JSON object.`}]})});
+      const res=await fetch("/api/analyse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"analyse",token:getSession()?.token||null,payload:{model:"claude-sonnet-4-20250514",max_tokens:4000,system:AI_SYS,messages:[{role:"user",content:`CURRENT STATE:\n${state}\n\nSPRINT TRANSCRIPT:\n${text}\n\nReturn ONLY the JSON object.`}]}})});
       if(!res.ok){const e=await res.json();setErr(e.error||`Error ${res.status}`);setStage("input");return;}
       const data=await res.json();
       const raw=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
