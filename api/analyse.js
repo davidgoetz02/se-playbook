@@ -1,4 +1,6 @@
-export default async function handler(req, res) {
+const https = require('https');
+
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -6,7 +8,6 @@ export default async function handler(req, res) {
 
   const key = process.env.ANTHROPIC_API_KEY;
 
-  // GET request = debug check
   if (req.method === 'GET') {
     return res.status(200).json({
       hasKey: !!key,
@@ -19,31 +20,41 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   if (!key) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set' });
 
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const body = JSON.stringify(req.body);
+
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'api.anthropic.com',
+      path: '/v1/messages',
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
         'x-api-key': key,
         'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify(req.body)
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error: data?.error?.message || 'Anthropic API error',
-        type: data?.error?.type,
-        anthropicStatus: response.status
-      });
-    }
-    res.status(200).json(data);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-}
-```
+      }
+    };
 
-After committing and Vercel redeploys, **open this URL in your browser** (replace with your actual domain):
-```
-https://se-playbook-tool.vercel.app/api/analyse
+    const apiReq = https.request(options, (apiRes) => {
+      let data = '';
+      apiRes.on('data', chunk => data += chunk);
+      apiRes.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          res.status(apiRes.statusCode).json(parsed);
+        } catch (e) {
+          res.status(500).json({ error: 'Failed to parse response', raw: data });
+        }
+        resolve();
+      });
+    });
+
+    apiReq.on('error', (e) => {
+      res.status(500).json({ error: e.message });
+      resolve();
+    });
+
+    apiReq.write(body);
+    apiReq.end();
+  });
+};
