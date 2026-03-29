@@ -583,8 +583,8 @@ function MyTodos({user,allInitData,cfg,onUpdate}){
 // --- Admin Panel ---
 function AdminPanel({cfg,setCfg,initiatives,setInitiatives}){
   const [users,setUsers]=useState([]);const [loading,setLoading]=useState(true);
-  const [newUser,setNewUser]=useState({username:"",email:"",password:"",role:"member"});
-  const [newPw,setNewPw]=useState({});const [msg,setMsg]=useState({text:"",type:"ok"});
+  const [newUser,setNewUser]=useState({username:"",email:"",role:"member"});
+  const [msg,setMsg]=useState({text:"",type:"ok"});
   const [lc,setLc]=useState(cfg);const [addVals,setAddVals]=useState({statuses:"",priorities:"",owners:"",action_statuses:""});
   const [editInit,setEditInit]=useState(null);
   const [newInit,setNewInit]=useState({name:"",description:"",icon:"📋",color:"#378ADD"});
@@ -592,20 +592,15 @@ function AdminPanel({cfg,setCfg,initiatives,setInitiatives}){
   useEffect(()=>{dbGetUsers().then(u=>{setUsers(u||[]);setLoading(false);});},[]);
   function flash(text,type="ok"){setMsg({text,type});setTimeout(()=>setMsg({text:"",type:"ok"}),3500);}
   async function addUser(){
-    if(!newUser.username||!newUser.email||!newUser.password){flash("Please fill in name, email and password.","err");return;}
-    const r=await dbAddUser(newUser.username,newUser.password,newUser.role,newUser.email);
+    if(!newUser.username||!newUser.email){flash("Please fill in display name and email.","err");return;}
+    const tempPw=Math.random().toString(36).slice(-10)+"A1!";
+    const r=await dbAddUser(newUser.username,tempPw,newUser.role,newUser.email);
     if(r.status!==200){flash(r.data?.error||"Failed to add user.","err");return;}
-    const u=await dbGetUsers();setUsers(u||[]);setNewUser({username:"",email:"",password:"",role:"member"});flash(`User "${newUser.username}" added.`);
+    const u=await dbGetUsers();setUsers(u||[]);setNewUser({username:"",email:"",role:"member"});flash(`User "${newUser.username}" added. They'll receive a Supabase invite email to set their password.`);
   }
   async function delUser(userId,username){
     if(!confirm(`Remove user "${username}"?`))return;
     await dbDelUser(userId);const us=await dbGetUsers();setUsers(us||[]);flash(`User "${username}" removed.`);
-  }
-  async function updPw(userId,username){
-    const p=newPw[userId];if(!p)return;
-    const r=await dbResetPw(userId,p);
-    if(r.status!==200){flash(r.data?.error||"Failed to reset password.","err");return;}
-    setNewPw(prev=>({...prev,[userId]:""}));flash(`Password updated for "${username}".`);
   }
   async function saveCfg(){await Promise.all(Object.keys(lc).map(k=>dbSetConfig(k,lc[k])));setCfg(lc);flash("Configuration saved.");}
   function addToList(key){const v=addVals[key].trim();if(!v)return;setLc(c=>({...c,[key]:[...c[key],v]}));setAddVals(p=>({...p,[key]:""}));}
@@ -698,16 +693,14 @@ function AdminPanel({cfg,setCfg,initiatives,setInitiatives}){
       <h3>Team members</h3>
       {loading?<Spinner size={24}/>:users.map(u=>(<div key={u.id} className="user-row">
         <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:120}}><div style={{width:28,height:28,borderRadius:"50%",background:oc(u.username,[])+"22",border:`1.5px solid ${oc(u.username,[])}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,color:oc(u.username,[])}}>{u.username[0]}</div><div><span style={{fontSize:13,fontWeight:500}}>{u.username}</span><div style={{fontSize:11,color:"var(--ts)"}}>{u.email||""}</div></div><span className="pill" style={{fontSize:10,background:u.role==="admin"?"#FAEEDA":"#F1EFE8",color:u.role==="admin"?"#633806":"#5F5E5A"}}>{u.role}</span></div>
-        <input type="password" value={newPw[u.id]||""} onChange={e=>setNewPw(p=>({...p,[u.id]:e.target.value}))} placeholder="New password" style={{width:140,fontSize:12}}/>
-        <button className="btn-p" style={{fontSize:11,padding:"4px 10px"}} onClick={()=>updPw(u.id,u.username)}>Reset pw</button>
         {u.role!=="admin"&&<button className="btn-d" onClick={()=>delUser(u.id,u.username)}>Remove</button>}
       </div>))}
       <div style={{marginTop:14,padding:12,background:"var(--bs)",borderRadius:8}}>
-        <div style={{fontSize:12,fontWeight:500,marginBottom:8}}>Add new user</div>
+        <div style={{fontSize:12,fontWeight:500,marginBottom:4}}>Add new user</div>
+        <div style={{fontSize:11,color:"var(--ts)",marginBottom:8}}>The user will receive a Supabase invite email to set their own password.</div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           <input value={newUser.username} onChange={e=>setNewUser(p=>({...p,username:e.target.value}))} placeholder="Display name" style={{flex:1,minWidth:100,fontSize:12}}/>
           <input type="email" value={newUser.email} onChange={e=>setNewUser(p=>({...p,email:e.target.value}))} placeholder="Email address" style={{flex:2,minWidth:160,fontSize:12}}/>
-          <input type="password" value={newUser.password} onChange={e=>setNewUser(p=>({...p,password:e.target.value}))} placeholder="Password" style={{flex:1,minWidth:100,fontSize:12}}/>
           <Sel value={newUser.role} options={["member","admin"]} onChange={v=>setNewUser(p=>({...p,role:v}))} small/>
           <button className="btn-p" style={{fontSize:12,padding:"5px 14px"}} onClick={addUser}>Add</button>
         </div>
