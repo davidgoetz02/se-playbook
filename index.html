@@ -557,9 +557,45 @@ function AdminPanel({cfg,setCfg}){
 }
 
 // --- Sprint Import Modal ---
-const AI_SYS=`You are a project management assistant for the Intact SE Playbook initiative. You will receive the current state of a project planning tool and a sprint review transcript. Analyse the transcript carefully and return ONLY a valid JSON object — no markdown, no explanation:
-{"summary":"2-3 sentence summary of what changed","sectionUpdates":[{"num":"<num>","changes":{"status":"<if changed>","flag":"<if changed, empty to clear>","notes":"<if new context>","tasksToAdd":[{"task":"<text>","status":"Not Started"}],"tasksToComplete":["<exact task text>"],"tasksToUpdate":[{"task":"<exact text>","newStatus":"<status>"}]}}],"actionsToComplete":[<ids>],"actionsToAdd":[{"owner":"<n>","action":"<text>","due":"<date>","dep":"","status":"Committed","type":"action"}],"questionsToResolve":[<ids>],"questionsToAdd":[{"owner":"<n>","action":"<question>","due":"TBD","dep":"","status":"Decision Needed","type":"question"}]}
-Rules: only include changed fields; only mark Done if explicitly stated; return ONLY the JSON.`;
+const AI_SYS=`You are a project management assistant for the Intact SE Playbook initiative. You receive the current JSON state of a project planner and a sprint review transcript. Your job is to identify what changed, what was completed, and what new commitments were made.
+
+Return ONLY a single valid JSON object. No markdown, no code fences, no explanation before or after. Start your response with { and end with }.
+
+The JSON must have this exact shape:
+{
+  "summary": "string — 2-3 sentences describing what happened this sprint",
+  "sectionUpdates": [
+    {
+      "num": "section number as string, use '11-13' for that range",
+      "changes": {
+        "status": "new status string — only if changed",
+        "flag": "new flag text — only if changed; use empty string to clear a flag",
+        "notes": "text to append to notes — only if genuinely new context",
+        "tasksToAdd": [{"task": "task text", "status": "Not Started"}],
+        "tasksToComplete": ["exact task text to mark Done"],
+        "tasksToUpdate": [{"task": "exact existing task text", "newStatus": "new status"}]
+      }
+    }
+  ],
+  "actionsToComplete": [1, 2, 3],
+  "actionsToAdd": [
+    {"owner": "David", "action": "action description", "due": "due date", "dep": "dependency or empty string", "status": "Committed", "type": "action"}
+  ],
+  "questionsToResolve": [17, 18],
+  "questionsToAdd": [
+    {"owner": "David", "action": "question text", "due": "TBD", "dep": "", "status": "Decision Needed", "type": "question"}
+  ]
+}
+
+Rules:
+- Valid owner values: David, Steven, Stefan, Tom, David + Steven, David + Tom, Steven + Tom, Steven + Stefan, All
+- Valid section statuses: Not Started, Collecting, In Progress, In Cleanup, Done, Blocked
+- Only include sectionUpdates entries where something actually changed
+- Only include fields inside "changes" that actually changed — omit unchanged fields entirely
+- Only mark actions/tasks as complete if the transcript explicitly confirms they are done
+- If nothing changed in a category, use an empty array []
+- The actionsToComplete and questionsToResolve arrays contain integer IDs only
+- Be conservative — when in doubt, do not mark something as done`;
 
 function SprintModal({sections,actions,owners,onApply,onClose}){
   const [text,setText]=useState("");
@@ -569,14 +605,48 @@ function SprintModal({sections,actions,owners,onApply,onClose}){
   async function analyse(){
     if(!text.trim()){setErr("Please paste the transcript first.");return;}
     setErr("");setStage("thinking");
-    const state=JSON.stringify({sections:sections.map(s=>({num:s.num,title:s.title,owner:s.owner,status:s.status,flag:s.flag,tasks:s.tasks})),actions});
+    const state=JSON.stringify({
+      sections:sections.map(s=>({num:s.num,title:s.title,owner:s.owner,status:s.status,flag:s.flag,tasks:s.tasks})),
+      actions:actions.map(a=>({id:a.id,owner:a.owner,action:a.action,due:a.due,status:a.status,type:a.type}))
+    });
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4000,system:AI_SYS,messages:[{role:"user",content:`CURRENT STATE:\n${state}\n\nSPRINT TRANSCRIPT:\n${text}`}]})});
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "anthropic-version":"2023-06-01",
+          "anthropic-dangerous-direct-browser-access":"true"
+        },
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:4000,
+          system:AI_SYS,
+          messages:[{role:"user",content:`CURRENT PROJECT STATE (JSON):\n${state}\n\nSPRINT REVIEW TRANSCRIPT:\n${text}\n\nAnalyse the transcript against the current state and return ONLY the JSON diff object as instructed. No preamble, no explanation, no markdown fences.`}]
+        })
+      });
+      if(!res.ok){
+        const errBody=await res.text();
+        console.error("API error:",res.status,errBody);
+        setErr(`API error ${res.status} — ${res.status===401?"check API key":res.status===429?"rate limited, try again in a moment":"see console for details"}`);
+        setStage("input");return;
+      }
       const data=await res.json();
-      const raw=data.content?.[0]?.text||"";
-      const parsed=JSON.parse(raw.replace(/```json|```/g,"").trim());
+      const raw=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+      if(!raw){setErr("No response from AI. Please try again.");setStage("input");return;}
+      const clean=raw.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/```\s*$/,"").trim();
+      let parsed;
+      try{parsed=JSON.parse(clean);}
+      catch(pe){
+        console.error("JSON parse error:",pe,"Raw:",raw);
+        setErr("AI returned an unexpected format. Please try again.");
+        setStage("input");return;
+      }
       setDiff(parsed);setStage("review");
-    }catch(e){setErr("Failed to analyse transcript. Please try again.");setStage("input");}
+    }catch(e){
+      console.error("Fetch error:",e);
+      setErr("Network error — please check your connection and try again.");
+      setStage("input");
+    }
   }
   function apply(){
     setStage("applying");
@@ -849,7 +919,8 @@ function App(){
   const ti=Math.min(tab,TABS.length-1);
 
   return(
-    <div>
+    <div className="app-wrap">
+      <AppBackground/>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       {showImport&&<SprintModal sections={sections} actions={actions} owners={cfg.owners} onApply={applyImport} onClose={()=>setShowImport(false)}/>}
       {showChangePw&&<ChangePwModal user={user} onClose={changed=>{setShowChangePw(false);if(changed){logout();}}}/>}
