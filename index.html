@@ -1,187 +1,318 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>SE Playbook — Project Planning Tool</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg-primary: #ffffff; --bg-secondary: #f5f5f3; --bg-tertiary: #eeece6;
-    --text-primary: #1a1a18; --text-secondary: #6b6b67; --text-tertiary: #9b9b96;
-    --border-tertiary: rgba(0,0,0,0.12); --border-secondary: rgba(0,0,0,0.22);
-    --border-primary: rgba(0,0,0,0.35); --radius-md: 8px; --radius-lg: 12px;
-    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg-primary: #1e1e1c; --bg-secondary: #2a2a28; --bg-tertiary: #333330;
-      --text-primary: #f0ede6; --text-secondary: #a0a09a; --text-tertiary: #6a6a64;
-      --border-tertiary: rgba(255,255,255,0.1); --border-secondary: rgba(255,255,255,0.18); --border-primary: rgba(255,255,255,0.28);
-    }
-  }
-  body { font-family: var(--font); background: var(--bg-tertiary); color: var(--text-primary); min-height: 100vh; }
-  #root { max-width: 1000px; margin: 0 auto; padding: 1.5rem 1rem; }
-  input, textarea, select { font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); border: 0.5px solid var(--border-tertiary); border-radius: var(--radius-md); padding: 5px 9px; font-size: 13px; outline: none; transition: border-color 0.15s; }
-  input:focus, textarea:focus, select:focus { border-color: var(--border-secondary); }
-  button { font-family: var(--font); cursor: pointer; }
-  textarea { resize: vertical; line-height: 1.5; }
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border-secondary); border-radius: 99px; }
-  .tab-bar { display: flex; gap: 4px; margin-bottom: 1.25rem; flex-wrap: wrap; }
-  .tab-btn { font-size: 13px; padding: 6px 16px; border-radius: var(--radius-md); font-weight: 400; border: 0.5px solid var(--border-secondary); background: var(--bg-primary); color: var(--text-primary); transition: all 0.15s; }
-  .tab-btn.active { font-weight: 500; border: 1.5px solid var(--border-primary); background: var(--bg-secondary); }
-  .card { background: var(--bg-primary); border: 0.5px solid var(--border-tertiary); border-radius: var(--radius-lg); padding: 1rem; }
-  .card-secondary { background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 1rem; }
-  .stat-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 1rem; }
-  .stat-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 1rem; }
-  .stat-card { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 0.75rem 1rem; }
-  .stat-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
-  .stat-val { font-size: 22px; font-weight: 500; }
-  .pill { font-size: 11px; padding: 2px 9px; border-radius: 99px; font-weight: 500; white-space: nowrap; display: inline-block; }
-  .flag-badge { background: #FCEBEB; color: #A32D2D; border-radius: 6px; padding: 6px 10px; font-size: 12px; margin-bottom: 6px; display: flex; gap: 6px; }
-  .inline-btn { font-size: 11px; padding: 3px 8px; border-radius: 6px; border: 0.5px solid var(--border-secondary); background: none; color: var(--text-secondary); }
-  .inline-btn:hover { background: var(--bg-secondary); }
-  .del-btn { font-size: 11px; padding: 3px 8px; border-radius: 6px; border: 0.5px solid #F09595; background: none; color: #A32D2D; }
-  .add-btn { font-size: 12px; padding: 4px 12px; border-radius: 6px; border: 0.5px solid var(--border-secondary); background: var(--bg-secondary); color: var(--text-secondary); margin-top: 4px; }
-  .primary-btn { font-size: 13px; padding: 7px 16px; border-radius: var(--radius-md); border: 0.5px solid var(--border-secondary); background: var(--bg-secondary); color: var(--text-primary); }
-  .section-row { background: var(--bg-primary); border: 0.5px solid var(--border-tertiary); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
-  .section-header { display: flex; align-items: center; gap: 10px; padding: 0.75rem 1rem; flex-wrap: wrap; }
-  .kanban-board { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; align-items: start; }
-  .kanban-col { border-radius: 10px; padding: 0.75rem; min-height: 160px; }
-  .kanban-card { border-radius: 8px; padding: 0.625rem 0.75rem; margin-bottom: 8px; cursor: grab; user-select: none; border: 0.5px solid var(--border-tertiary); }
-  .kanban-card:active { cursor: grabbing; opacity: 0.85; }
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem; }
-  .owner-tags { display: flex; gap: 4px; flex-wrap: wrap; }
-  .owner-tag { font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 500; }
-  .sync-bar { font-size: 11px; display: flex; align-items: center; gap: 6px; }
-  .sync-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-  @media (max-width: 700px) {
-    .stat-grid-4 { grid-template-columns: repeat(2,1fr); }
-    .two-col { grid-template-columns: 1fr; }
-    .kanban-board { grid-template-columns: repeat(2,1fr); }
-  }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-primary:#ffffff;--bg-secondary:#f5f5f3;--bg-tertiary:#eeece6;
+  --text-primary:#1a1a18;--text-secondary:#6b6b67;--text-tertiary:#9b9b96;
+  --border-t:rgba(0,0,0,0.12);--border-s:rgba(0,0,0,0.22);--border-p:rgba(0,0,0,0.35);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+@media(prefers-color-scheme:dark){
+  :root{--bg-primary:#1e1e1c;--bg-secondary:#2a2a28;--bg-tertiary:#333330;--text-primary:#f0ede6;--text-secondary:#a0a09a;--text-tertiary:#6a6a64;--border-t:rgba(255,255,255,0.1);--border-s:rgba(255,255,255,0.18);--border-p:rgba(255,255,255,0.28)}
+}
+body{font-family:var(--font);background:var(--bg-tertiary);color:var(--text-primary);min-height:100vh}
+#root{max-width:1000px;margin:0 auto;padding:1.5rem 1rem}
+input,textarea,select{font-family:var(--font);background:var(--bg-primary);color:var(--text-primary);border:0.5px solid var(--border-t);border-radius:8px;padding:5px 9px;font-size:13px;outline:none;transition:border-color .15s}
+input:focus,textarea:focus,select:focus{border-color:var(--border-s)}
+button{font-family:var(--font);cursor:pointer}
+textarea{resize:vertical;line-height:1.5}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:var(--border-s);border-radius:99px}
+.tab-btn{font-size:13px;padding:6px 16px;border-radius:8px;border:0.5px solid var(--border-s);background:var(--bg-primary);color:var(--text-primary);transition:all .15s}
+.tab-btn.active{font-weight:500;border:1.5px solid var(--border-p);background:var(--bg-secondary)}
+.card{background:var(--bg-primary);border:0.5px solid var(--border-t);border-radius:12px;padding:1rem}
+.card-sec{background:var(--bg-secondary);border-radius:12px;padding:1rem}
+.pill{font-size:11px;padding:2px 9px;border-radius:99px;font-weight:500;white-space:nowrap;display:inline-block}
+.flag-b{background:#FCEBEB;color:#A32D2D;border-radius:6px;padding:6px 10px;font-size:12px;margin-bottom:6px;display:flex;gap:6px}
+.sec-row{background:var(--bg-primary);border:0.5px solid var(--border-t);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.sec-hdr{display:flex;align-items:center;gap:10px;padding:.75rem 1rem;flex-wrap:wrap}
+.kb-board{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;align-items:start}
+.kb-col{border-radius:10px;padding:.75rem;min-height:160px}
+.kb-card{border-radius:8px;padding:.625rem .75rem;margin-bottom:8px;cursor:grab;user-select:none;border:0.5px solid var(--border-t)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem}
+.stat-c{background:var(--bg-secondary);border-radius:8px;padding:.75rem 1rem}
+.owner-tags{display:flex;gap:4px;flex-wrap:wrap}
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:1rem}
+.modal{background:var(--bg-primary);border-radius:16px;padding:1.5rem;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;border:0.5px solid var(--border-s)}
+.modal h2{font-size:17px;font-weight:500;margin-bottom:6px}
+.modal p{font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:14px}
+.changes-list{border:0.5px solid var(--border-t);border-radius:8px;overflow:hidden;margin-bottom:14px}
+.change-item{padding:10px 14px;border-bottom:0.5px solid var(--border-t);font-size:13px;display:flex;gap:10px;align-items:flex-start}
+.change-item:last-child{border-bottom:none}
+.change-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;flex-shrink:0;margin-top:1px}
+.btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+.btn-primary{font-size:13px;padding:8px 18px;border-radius:8px;border:none;background:#378ADD;color:#fff;font-weight:500}
+.btn-primary:hover{background:#2a72c4}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-sec{font-size:13px;padding:8px 18px;border-radius:8px;border:0.5px solid var(--border-s);background:none;color:var(--text-secondary)}
+.pulse{animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:700px){.g4{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}.kb-board{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useRef, useCallback } = React;
+const {useState,useEffect,useRef,useCallback}=React;
 
-const SUPABASE_URL = "https://xashkjovtidhgmqmthvy.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhhc2hram92dGlkaGdtcW10aHZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MDA5MzQsImV4cCI6MjA5MDM3NjkzNH0.brfdv_UAXcok6VuM8-Hd7zCueg04dzFi-U4yyfQ8lJo";
+const SB_URL="https://xashkjovtidhgmqmthvy.supabase.co";
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhhc2hram92dGlkaGdtcW10aHZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MDA5MzQsImV4cCI6MjA5MDM3NjkzNH0.brfdv_UAXcok6VuM8-Hd7zCueg04dzFi-U4yyfQ8lJo";
+const AI_URL="https://api.anthropic.com/v1/messages";
 
-async function dbGet() {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/playbook?id=eq.state&select=data`, {
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-  });
-  const rows = await r.json();
-  return rows?.[0]?.data || null;
+async function dbGet(){
+  const r=await fetch(`${SB_URL}/rest/v1/playbook?id=eq.state&select=data`,{headers:{apikey:SB_KEY,Authorization:`Bearer ${SB_KEY}`}});
+  const rows=await r.json();return rows?.[0]?.data||null;
 }
-async function dbSet(data) {
-  await fetch(`${SUPABASE_URL}/rest/v1/playbook?id=eq.state`, {
-    method: "PATCH",
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-    body: JSON.stringify({ data, updated_at: new Date().toISOString() })
-  });
+async function dbSet(data){
+  await fetch(`${SB_URL}/rest/v1/playbook?id=eq.state`,{method:"PATCH",headers:{apikey:SB_KEY,Authorization:`Bearer ${SB_KEY}`,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify({data,updated_at:new Date().toISOString()})});
 }
 
-const TABS = ["Dashboard","Kanban","Project Plan","Action Items"];
-const ALL_STATUSES = ["Not Started","Collecting","In Progress","In Cleanup","Done","Blocked"];
-const ALL_PRIORITIES = ["P1","P2","P3"];
-const ALL_ACTION_STATUSES = ["Urgent","In Progress","Scheduled","Committed","Decision Needed","Done"];
-const KANBAN_COLS = ["Not Started","In Progress","In Cleanup","Done","Blocked"];
-const OWNERS = ["David","Steven","Stefan","Tom","David + Steven","David + Tom","Steven + Tom","Steven + Stefan","All"];
+const TABS=["Dashboard","Kanban","Project Plan","Action Items"];
+const ALL_ST=["Not Started","Collecting","In Progress","In Cleanup","Done","Blocked"];
+const ALL_PR=["P1","P2","P3"];
+const ALL_AS=["Urgent","In Progress","Scheduled","Committed","Decision Needed","Done"];
+const KB_COLS=["Not Started","In Progress","In Cleanup","Done","Blocked"];
+const OWNERS=["David","Steven","Stefan","Tom","David + Steven","David + Tom","Steven + Tom","Steven + Stefan","All"];
 
-const SS = {
-  "Done":        { bg:"#EAF3DE", text:"#3B6D11", border:"#97C459" },
-  "In Progress": { bg:"#E6F1FB", text:"#185FA5", border:"#85B7EB" },
-  "In Cleanup":  { bg:"#FAEEDA", text:"#633806", border:"#EF9F27" },
-  "Not Started": { bg:"#F1EFE8", text:"#5F5E5A", border:"#B4B2A9" },
-  "Blocked":     { bg:"#FCEBEB", text:"#A32D2D", border:"#F09595" },
-  "Collecting":  { bg:"#EEEDFE", text:"#3C3489", border:"#AFA9EC" },
-};
-const PS = { P1:{bg:"#FCEBEB",text:"#A32D2D"}, P2:{bg:"#FAEEDA",text:"#633806"}, P3:{bg:"#F1EFE8",text:"#5F5E5A"} };
-const ASC = { Urgent:"#A32D2D", Committed:"#185FA5", Scheduled:"#3B6D11", "In Progress":"#0F6E56", "Decision Needed":"#633806", Done:"#3B6D11" };
-const OC = { David:"#378ADD", Steven:"#1D9E75", Stefan:"#7F77DD", Tom:"#D85A30" };
+const SS={Done:{bg:"#EAF3DE",text:"#3B6D11",border:"#97C459"},"In Progress":{bg:"#E6F1FB",text:"#185FA5",border:"#85B7EB"},"In Cleanup":{bg:"#FAEEDA",text:"#633806",border:"#EF9F27"},"Not Started":{bg:"#F1EFE8",text:"#5F5E5A",border:"#B4B2A9"},Blocked:{bg:"#FCEBEB",text:"#A32D2D",border:"#F09595"},Collecting:{bg:"#EEEDFE",text:"#3C3489",border:"#AFA9EC"}};
+const PS={P1:{bg:"#FCEBEB",text:"#A32D2D"},P2:{bg:"#FAEEDA",text:"#633806"},P3:{bg:"#F1EFE8",text:"#5F5E5A"}};
+const ASC={Urgent:"#A32D2D",Committed:"#185FA5",Scheduled:"#3B6D11","In Progress":"#0F6E56","Decision Needed":"#633806",Done:"#3B6D11"};
+const OC={David:"#378ADD",Steven:"#1D9E75",Stefan:"#7F77DD",Tom:"#D85A30"};
 
-const DEF_SECTIONS = [
-  { num:1,      title:"Introduction",                    owner:"David",        prio:"P1", status:"In Progress", notes:"Partial content drafted. To take over relevant content from Sales Playbook.", flag:"", tasks:[{task:"Draft purpose, scope, and relationship to Sales Playbook",status:"In Progress"},{task:"Define when to use the handbook",status:"In Progress"}] },
-  { num:2,      title:"SE Onboarding & Rollout Plan",    owner:"David",        prio:"P2", status:"Not Started",  notes:"No documented progress.", flag:"Not started — not discussed in sprint review.", tasks:[{task:"Write 30/60/90/120/150 day ramp-up overview",status:"Not Started"},{task:"Define key milestones and KPIs",status:"Not Started"},{task:"Document internal systems & tools access",status:"Not Started"},{task:"Outline demo certification and shadowing process",status:"Not Started"}] },
-  { num:3,      title:"SE Role in the Sales Process",    owner:"Steven",       prio:"P1", status:"In Progress", notes:"Steven spent ~2hrs updating the outline. ~50% complete.", flag:"Boundary between Steven's section and Stefan's Solution Design phase must be agreed.", tasks:[{task:"Document SE responsibilities by stage",status:"In Progress"},{task:"Write SE vs. AE ownership (RACI)",status:"In Progress"},{task:"Define technical win criteria",status:"In Progress"},{task:"Align on AESE collaboration boundaries with Stefan",status:"Not Started"}] },
-  { num:4,      title:"Technical Discovery",             owner:"Steven + Tom", prio:"P1", status:"In Cleanup",  notes:"Tom has a 10-page Word doc. Needs restructuring into generic vs. detailed scoping.", flag:"", tasks:[{task:"Split discovery doc into generic + detailed + sector-specific sections",status:"Not Started"},{task:"Use Certified Humane transcript as additional AI input",status:"Not Started"},{task:"Steven: review Tom's discovery doc and add content",status:"Not Started"},{task:"Merge Steven's Word docs with Tom's discovery doc",status:"Not Started"},{task:"Upload finalised doc to SharePoint",status:"Not Started"}] },
-  { num:5,      title:"Demo Execution",                  owner:"Steven + Tom", prio:"P1", status:"Not Started", notes:"Next priority after Discovery and Solution Design boundary is set.", flag:"Intact AI demo script and visual assets needed ahead of Q2 launch. David currently working on script.", tasks:[{task:"Define standard vs. custom demo framework",status:"Not Started"},{task:"David: draft demo narrative structure (Pain → Solution → Value)",status:"Not Started"},{task:"Compile one-liner objection responses (27 tracked in Gong)",status:"Not Started"},{task:"David: complete Intact AI demo script from Gong recordings",status:"In Progress"},{task:"David: secure Intact AI screenshots/mockups",status:"Not Started"}] },
-  { num:6,      title:"Solution Design Phase",           owner:"Stefan",       prio:"P1", status:"In Progress", notes:"Stefan has 20+ page draft. Entry/exit triggers defined. Two output tracks: Solution Concept and SOW.", flag:"Roles & responsibilities within the phase unresolved — decision required from David/Armin/Brian.", tasks:[{task:"Finalise entry/exit trigger definition",status:"In Progress"},{task:"Clarify roles & responsibilities (decision needed)",status:"In Progress"},{task:"Incorporate feedback from morning deep-dive session",status:"Not Started"},{task:"Define two tracks — SAW vs. Assessment",status:"In Progress"},{task:"Create assessment agenda template",status:"Not Started"},{task:"Create workshop preparation checklist",status:"Not Started"},{task:"Compact 20+ page draft into checklist-driven version",status:"Not Started"},{task:"Align on demo/discovery boundary with Steven",status:"Not Started"},{task:"Build 70–80% AI-assisted doc generation workflow in Claude",status:"Not Started"}] },
-  { num:7,      title:"Handling Technical Objections",   owner:"David",        prio:"P2", status:"Not Started", notes:"Prio 2. David is responsible.", flag:"", tasks:[{task:"Compile objection categories: Security, Integrations, Data Residency, Performance",status:"Not Started"},{task:"Define escalation paths to Product, Security, Legal",status:"Not Started"},{task:"Draft competitive positioning tips and battlecard reference points",status:"Not Started"}] },
-  { num:8,      title:"Cross-Functional Collaboration",  owner:"David",        prio:"P2", status:"Not Started", notes:"No SE collaboration content exists yet. Prio 2.", flag:"No content exists — risk of indefinite deferral.", tasks:[{task:"Document AE/SE working rhythms, syncs, messaging alignment",status:"Not Started"},{task:"Describe collaboration with Product, Implementation, CS, Legal",status:"Not Started"},{task:"Write guide to running internal Deal Board reviews as an SE",status:"Not Started"}] },
-  { num:9,      title:"Commercial Awareness for SEs",    owner:"David",        prio:"P2", status:"Not Started", notes:"Prio 2. No progress documented.", flag:"", tasks:[{task:"Document ARR, TCV, licensing basics for SEs",status:"Not Started"},{task:"Describe SE role in pricing and strategy conversations",status:"Not Started"},{task:"Write RFP partnering and build-vs-buy talking points",status:"Not Started"}] },
-  { num:10,     title:"Core Tools & Resources",          owner:"David",        prio:"P1", status:"Collecting",  notes:"David gathering resources. SharePoint cleanup needed. Claude slide template project underway.", flag:"SharePoint disorganisation is a team blocker.", tasks:[{task:"Build resource repository (presentations, templates, SLAs, IP links)",status:"In Progress"},{task:"Clean up SharePoint — remove duplicates",status:"Not Started"},{task:"Organise Teams channel with pinned links",status:"Not Started"},{task:"Feed slide templates into Claude for company-wide consistency",status:"In Progress"},{task:"Document internal templates index",status:"Not Started"}] },
-  { num:"11–13",title:"Performance, Scenarios & Appendices", owner:"David",   prio:"P3", status:"Not Started", notes:"Prio 2–3. No discussion in sprint.", flag:"No confirmed owner engagement — risk of indefinite deferral.", tasks:[{task:"Draft performance expectations and career development section",status:"Not Started"},{task:"Write SE scenarios & playbooks (SMB vs. Enterprise)",status:"Not Started"},{task:"Compile appendices A–I",status:"Not Started"}] },
+const DEF_S=[
+  {num:1,title:"Introduction",owner:"David",prio:"P1",status:"In Progress",notes:"Partial content drafted. To take over relevant content from Sales Playbook.",flag:"",tasks:[{task:"Draft purpose, scope, and relationship to Sales Playbook",status:"In Progress"},{task:"Define when to use the handbook",status:"In Progress"}]},
+  {num:2,title:"SE Onboarding & Rollout Plan",owner:"David",prio:"P2",status:"Not Started",notes:"No documented progress.",flag:"Not started — not discussed in sprint review.",tasks:[{task:"Write 30/60/90/120/150 day ramp-up overview",status:"Not Started"},{task:"Define key milestones and KPIs",status:"Not Started"},{task:"Document internal systems & tools access",status:"Not Started"},{task:"Outline demo certification and shadowing process",status:"Not Started"}]},
+  {num:3,title:"SE Role in the Sales Process",owner:"Steven",prio:"P1",status:"In Progress",notes:"Steven spent ~2hrs updating the outline. ~50% complete.",flag:"Boundary between Steven's section and Stefan's Solution Design phase must be agreed.",tasks:[{task:"Document SE responsibilities by stage",status:"In Progress"},{task:"Write SE vs. AE ownership (RACI)",status:"In Progress"},{task:"Define technical win criteria",status:"In Progress"},{task:"Align on AESE collaboration boundaries with Stefan",status:"Not Started"}]},
+  {num:4,title:"Technical Discovery",owner:"Steven + Tom",prio:"P1",status:"In Cleanup",notes:"Tom has a 10-page Word doc. Needs restructuring into generic vs. detailed scoping.",flag:"",tasks:[{task:"Split discovery doc into generic + detailed + sector-specific sections",status:"Not Started"},{task:"Use Certified Humane transcript as additional AI input",status:"Not Started"},{task:"Steven: review Tom's discovery doc and add content",status:"Not Started"},{task:"Merge Steven's Word docs with Tom's discovery doc",status:"Not Started"},{task:"Upload finalised doc to SharePoint",status:"Not Started"}]},
+  {num:5,title:"Demo Execution",owner:"Steven + Tom",prio:"P1",status:"Not Started",notes:"Next priority after Discovery and Solution Design boundary is set.",flag:"Intact AI demo script and visual assets needed ahead of Q2 launch. David currently working on script.",tasks:[{task:"Define standard vs. custom demo framework",status:"Not Started"},{task:"David: draft demo narrative structure (Pain → Solution → Value)",status:"Not Started"},{task:"Compile one-liner objection responses (27 tracked in Gong)",status:"Not Started"},{task:"David: complete Intact AI demo script from Gong recordings",status:"In Progress"},{task:"David: secure Intact AI screenshots/mockups",status:"Not Started"}]},
+  {num:6,title:"Solution Design Phase",owner:"Stefan",prio:"P1",status:"In Progress",notes:"Stefan has 20+ page draft. Entry/exit triggers defined. Two output tracks: Solution Concept and SOW.",flag:"Roles & responsibilities within the phase unresolved — decision required from David/Armin/Brian.",tasks:[{task:"Finalise entry/exit trigger definition",status:"In Progress"},{task:"Clarify roles & responsibilities (decision needed)",status:"In Progress"},{task:"Incorporate feedback from morning deep-dive session",status:"Not Started"},{task:"Define two tracks — SAW vs. Assessment",status:"In Progress"},{task:"Create assessment agenda template",status:"Not Started"},{task:"Create workshop preparation checklist",status:"Not Started"},{task:"Compact 20+ page draft into checklist-driven version",status:"Not Started"},{task:"Align on demo/discovery boundary with Steven",status:"Not Started"},{task:"Build 70–80% AI-assisted doc generation workflow in Claude",status:"Not Started"}]},
+  {num:7,title:"Handling Technical Objections",owner:"David",prio:"P2",status:"Not Started",notes:"Prio 2. David is responsible.",flag:"",tasks:[{task:"Compile objection categories: Security, Integrations, Data Residency, Performance",status:"Not Started"},{task:"Define escalation paths to Product, Security, Legal",status:"Not Started"},{task:"Draft competitive positioning tips and battlecard reference points",status:"Not Started"}]},
+  {num:8,title:"Cross-Functional Collaboration",owner:"David",prio:"P2",status:"Not Started",notes:"No SE collaboration content exists yet.",flag:"No content exists — risk of indefinite deferral.",tasks:[{task:"Document AE/SE working rhythms, syncs, messaging alignment",status:"Not Started"},{task:"Describe collaboration with Product, Implementation, CS, Legal",status:"Not Started"},{task:"Write guide to running internal Deal Board reviews as an SE",status:"Not Started"}]},
+  {num:9,title:"Commercial Awareness for SEs",owner:"David",prio:"P2",status:"Not Started",notes:"Prio 2. No progress documented.",flag:"",tasks:[{task:"Document ARR, TCV, licensing basics for SEs",status:"Not Started"},{task:"Describe SE role in pricing and strategy conversations",status:"Not Started"},{task:"Write RFP partnering and build-vs-buy talking points",status:"Not Started"}]},
+  {num:10,title:"Core Tools & Resources",owner:"David",prio:"P1",status:"Collecting",notes:"David gathering resources. SharePoint cleanup needed. Claude slide template project underway.",flag:"SharePoint disorganisation is a team blocker.",tasks:[{task:"Build resource repository (presentations, templates, SLAs, IP links)",status:"In Progress"},{task:"Clean up SharePoint — remove duplicates",status:"Not Started"},{task:"Organise Teams channel with pinned links",status:"Not Started"},{task:"Feed slide templates into Claude for company-wide consistency",status:"In Progress"},{task:"Document internal templates index",status:"Not Started"}]},
+  {num:"11–13",title:"Performance, Scenarios & Appendices",owner:"David",prio:"P3",status:"Not Started",notes:"Prio 2–3. No discussion in sprint.",flag:"No confirmed owner engagement — risk of indefinite deferral.",tasks:[{task:"Draft performance expectations and career development section",status:"Not Started"},{task:"Write SE scenarios & playbooks (SMB vs. Enterprise)",status:"Not Started"},{task:"Compile appendices A–I",status:"Not Started"}]},
+];
+const DEF_A=[
+  {id:1,owner:"Steven",action:"Review Tom's 10-page discovery document and add inline feedback + supplementary content",due:"Mon Mar 30",dep:"",status:"Committed",type:"action"},
+  {id:2,owner:"Steven + Stefan",action:"30-min alignment call: agree on boundary between Demo/Discovery and Solution Design",due:"Mon Mar 30",dep:"Must happen before either section can be finalised",status:"Scheduled",type:"action"},
+  {id:3,owner:"Tom",action:"Split discovery document into three sections: generic, detailed, sector-specific scoping",due:"Next sprint",dep:"",status:"Committed",type:"action"},
+  {id:4,owner:"Tom",action:"Use Certified Humane discovery transcript as AI input to enrich sector discovery questions",due:"Next sprint",dep:"",status:"Committed",type:"action"},
+  {id:5,owner:"Tom",action:"Upload/link discovery document to SharePoint outline",due:"Mon Mar 30",dep:"",status:"Committed",type:"action"},
+  {id:6,owner:"Stefan",action:"Continue Solution Design phase draft: incorporate morning deep-dive feedback, refine entry/exit triggers",due:"Next sprint",dep:"",status:"Committed",type:"action"},
+  {id:7,owner:"Stefan",action:"Create/revise assessment agenda template and workshop preparation checklist",due:"Next sprint",dep:"",status:"Committed",type:"action"},
+  {id:8,owner:"Stefan",action:"Compact 20+ page playbook into shorter, checklist-driven summary",due:"Next sprint",dep:"",status:"Committed",type:"action"},
+  {id:9,owner:"Stefan",action:"Build 70–80% AI-assisted doc generation workflow in Claude for Solution Concept and SOW",due:"Ongoing",dep:"Awaiting full Claude company rollout",status:"In Progress",type:"action"},
+  {id:10,owner:"David",action:"Complete Intact AI demo script from Gong recordings (Tom + Jochen client calls)",due:"This week",dep:"",status:"In Progress",type:"action"},
+  {id:11,owner:"David",action:"Secure Intact AI screenshots and UI mockups to use in SE demos (product launching Q2)",due:"This week",dep:"Coordinate with Tom/Jochen — not yet shareable",status:"Urgent",type:"action"},
+  {id:12,owner:"David",action:"Build resource repository — compile all relevant presentations, templates, SLAs, IPLP links",due:"Next sprint",dep:"",status:"In Progress",type:"action"},
+  {id:13,owner:"David",action:"Clean up SharePoint: remove duplicates, establish a clear folder structure",due:"Next sprint",dep:"",status:"Committed",type:"action"},
+  {id:14,owner:"David",action:"Forward Global Sales Meeting invitation to Stefan",due:"Immediate",dep:"",status:"Committed",type:"action"},
+  {id:15,owner:"David",action:"Feed company slide templates into Claude for consistent AI-generated presentations",due:"Ongoing",dep:"",status:"In Progress",type:"action"},
+  {id:16,owner:"All",action:"Align on company-wide AI tooling: standardise on Claude — avoid building custom GPTs in ChatGPT",due:"Before GPT license expiry",dep:"GPT licenses active ~2–3 more months",status:"Decision Needed",type:"action"},
+  {id:17,owner:"David",action:"Where exactly does the SE discovery/demo section end and Stefan's Solution Design phase begin?",due:"Mon Mar 30",dep:"",status:"Decision Needed",type:"question"},
+  {id:18,owner:"David",action:"What is the formal name for the SAW output document — 'Solution Concept' or 'Statement of Work Light'?",due:"Next sprint",dep:"",status:"Decision Needed",type:"question"},
+  {id:19,owner:"David",action:"Who has final approval authority on roles & responsibilities within the Solution Design phase?",due:"Next sprint",dep:"",status:"Decision Needed",type:"question"},
+  {id:20,owner:"David",action:"Is there a formal deadline for playbook v1.0, or is it delivery-driven by the Intact AI launch?",due:"Next sprint",dep:"",status:"Decision Needed",type:"question"},
+  {id:21,owner:"David",action:"Will the playbook remain a Word/SharePoint document or migrate to another format?",due:"TBD",dep:"",status:"Decision Needed",type:"question"},
+  {id:22,owner:"David",action:"How will Gong data (27 tracked demo objections) be formally integrated into Section 5?",due:"TBD",dep:"",status:"Decision Needed",type:"question"},
+  {id:23,owner:"David",action:"When will the Intact AI presentation from the Global Sales Meeting be shareable for SE demo prep?",due:"TBD",dep:"",status:"Decision Needed",type:"question"},
 ];
 
-const DEF_ACTIONS = [
-  {id:1,  owner:"Steven",         action:"Review Tom's 10-page discovery document and add inline feedback + supplementary content", due:"Mon Mar 30", dep:"", status:"Committed",      type:"action"},
-  {id:2,  owner:"Steven + Stefan",action:"30-min alignment call: agree on boundary between Demo/Discovery and Solution Design",     due:"Mon Mar 30", dep:"Must happen before either section can be finalised", status:"Scheduled", type:"action"},
-  {id:3,  owner:"Tom",            action:"Split discovery document into three sections: generic, detailed, sector-specific scoping", due:"Next sprint", dep:"", status:"Committed", type:"action"},
-  {id:4,  owner:"Tom",            action:"Use Certified Humane discovery transcript as AI input to enrich sector discovery questions", due:"Next sprint", dep:"", status:"Committed", type:"action"},
-  {id:5,  owner:"Tom",            action:"Upload/link discovery document to SharePoint outline", due:"Mon Mar 30", dep:"", status:"Committed", type:"action"},
-  {id:6,  owner:"Stefan",         action:"Continue Solution Design phase draft: incorporate morning deep-dive feedback, refine entry/exit triggers", due:"Next sprint", dep:"", status:"Committed", type:"action"},
-  {id:7,  owner:"Stefan",         action:"Create/revise assessment agenda template and workshop preparation checklist", due:"Next sprint", dep:"", status:"Committed", type:"action"},
-  {id:8,  owner:"Stefan",         action:"Compact 20+ page playbook into shorter, checklist-driven summary", due:"Next sprint", dep:"", status:"Committed", type:"action"},
-  {id:9,  owner:"Stefan",         action:"Build 70–80% AI-assisted doc generation workflow in Claude for Solution Concept and SOW", due:"Ongoing", dep:"Awaiting full Claude company rollout", status:"In Progress", type:"action"},
-  {id:10, owner:"David",          action:"Complete Intact AI demo script from Gong recordings (Tom + Jochen client calls)", due:"This week", dep:"", status:"In Progress", type:"action"},
-  {id:11, owner:"David",          action:"Secure Intact AI screenshots and UI mockups to use in SE demos (product launching Q2)", due:"This week", dep:"Coordinate with Tom/Jochen — not yet shareable", status:"Urgent", type:"action"},
-  {id:12, owner:"David",          action:"Build resource repository — compile all relevant presentations, templates, SLAs, IPLP links", due:"Next sprint", dep:"", status:"In Progress", type:"action"},
-  {id:13, owner:"David",          action:"Clean up SharePoint: remove duplicates, establish a clear folder structure", due:"Next sprint", dep:"", status:"Committed", type:"action"},
-  {id:14, owner:"David",          action:"Forward Global Sales Meeting invitation to Stefan", due:"Immediate", dep:"", status:"Committed", type:"action"},
-  {id:15, owner:"David",          action:"Feed company slide templates into Claude for consistent AI-generated presentations", due:"Ongoing", dep:"", status:"In Progress", type:"action"},
-  {id:16, owner:"All",            action:"Align on company-wide AI tooling: standardise on Claude — avoid building custom GPTs in ChatGPT", due:"Before GPT license expiry", dep:"GPT licenses active ~2–3 more months", status:"Decision Needed", type:"action"},
-  {id:17, owner:"David",          action:"Where exactly does the SE discovery/demo section end and Stefan's Solution Design phase begin?", due:"Mon Mar 30", dep:"", status:"Decision Needed", type:"question"},
-  {id:18, owner:"David",          action:"What is the formal name for the SAW output document — 'Solution Concept' or 'Statement of Work Light'?", due:"Next sprint", dep:"", status:"Decision Needed", type:"question"},
-  {id:19, owner:"David",          action:"Who has final approval authority on roles & responsibilities within the Solution Design phase?", due:"Next sprint", dep:"", status:"Decision Needed", type:"question"},
-  {id:20, owner:"David",          action:"Is there a formal deadline for playbook v1.0, or is it delivery-driven by the Intact AI launch?", due:"Next sprint", dep:"", status:"Decision Needed", type:"question"},
-  {id:21, owner:"David",          action:"Will the playbook remain a Word/SharePoint document or migrate to another format?", due:"TBD", dep:"", status:"Decision Needed", type:"question"},
-  {id:22, owner:"David",          action:"How will Gong data (27 tracked demo objections) be formally integrated into Section 5?", due:"TBD", dep:"", status:"Decision Needed", type:"question"},
-  {id:23, owner:"David",          action:"When will the Intact AI presentation from the Global Sales Meeting be shareable for SE demo prep?", due:"TBD", dep:"", status:"Decision Needed", type:"question"},
-];
+// ---- UI primitives ----
+function SPill({status,small}){const s=SS[status]||SS["Not Started"];return <span className="pill" style={{fontSize:small?11:12,background:s.bg,color:s.text,border:`1px solid ${s.border}`}}>{status}</span>;}
+function Pill({label,bg,text}){return <span className="pill" style={{background:bg,color:text}}>{label}</span>;}
+function FlagB({text}){if(!text)return null;return <div className="flag-b"><span>⚑</span><span>{text}</span></div>;}
+function OTag({owner}){const parts=owner.split("+").map(p=>p.trim());return <div className="owner-tags">{parts.map(p=>{const c=OC[p]||"#888";return <span key={p} className="pill" style={{fontSize:11,background:c+"18",border:`1px solid ${c}44`,color:c}}>{p}</span>;})}</div>;}
+function Sel({value,options,onChange,small}){return <select value={value} onChange={e=>onChange(e.target.value)} style={{fontSize:small?11:12,padding:"2px 4px"}}>{options.map(o=><option key={o}>{o}</option>)}</select>;}
+function Txt({value,onChange,multi,style={}}){const s={fontSize:13,width:"100%",lineHeight:1.5,...style};return multi?<textarea value={value} onChange={e=>onChange(e.target.value)} rows={2} style={s}/>:<input value={value} onChange={e=>onChange(e.target.value)} style={s}/>;}
+function SC({label,val,color}){return <div className="stat-c"><div style={{fontSize:12,color:"var(--text-secondary)",marginBottom:4}}>{label}</div><div style={{fontSize:22,fontWeight:500,color:color||"var(--text-primary)"}}>{val}</div></div>;}
+function SyncDot({status}){const m={syncing:{c:"#EF9F27",t:"Syncing…"},saved:{c:"#1D9E75",t:"Saved ✓"},error:{c:"#A32D2D",t:"Sync failed"}};const s=m[status];if(!s)return null;return <span style={{fontSize:11,color:s.c,display:"flex",alignItems:"center",gap:5}}><span style={{width:7,height:7,borderRadius:"50%",background:s.c,display:"inline-block"}}/>{s.t}</span>;}
 
-// --- UI Primitives ---
-function StatusPill({status,small}) {
-  const s=SS[status]||SS["Not Started"];
-  return <span className="pill" style={{fontSize:small?11:12,background:s.bg,color:s.text,border:`1px solid ${s.border}`}}>{status}</span>;
-}
-function Pill({label,bg,text}) { return <span className="pill" style={{background:bg,color:text}}>{label}</span>; }
-function FlagBadge({text}) { if(!text) return null; return <div className="flag-badge"><span>⚑</span><span>{text}</span></div>; }
-function OwnerTag({owner}) {
-  const parts=owner.split("+").map(p=>p.trim());
-  return <div className="owner-tags">{parts.map(p=>{const c=OC[p]||"#888";return <span key={p} className="owner-tag" style={{background:c+"18",border:`1px solid ${c}44`,color:c}}>{p}</span>;})}</div>;
-}
-function Sel({value,options,onChange,small}) {
-  return <select value={value} onChange={e=>onChange(e.target.value)} style={{fontSize:small?11:12,padding:"2px 4px"}}>{options.map(o=><option key={o}>{o}</option>)}</select>;
-}
-function Txt({value,onChange,multi,style={}}) {
-  const s={fontSize:13,width:"100%",lineHeight:1.5,...style};
-  return multi?<textarea value={value} onChange={e=>onChange(e.target.value)} rows={2} style={s}/>:<input value={value} onChange={e=>onChange(e.target.value)} style={s}/>;
-}
-function StatCard({label,val,color}) {
-  return <div className="stat-card"><div className="stat-label">{label}</div><div className="stat-val" style={{color:color||"var(--text-primary)"}}>{val}</div></div>;
-}
-function SyncBar({status}) {
-  const map={idle:{},syncing:{dot:"#EF9F27",msg:"Syncing…"},saved:{dot:"#1D9E75",msg:"Saved ✓"},error:{dot:"#A32D2D",msg:"Sync failed — check connection"}};
-  const s=map[status]||{};
-  if(!s.msg) return null;
-  return <div className="sync-bar"><span className="sync-dot" style={{background:s.dot}}/><span style={{color:s.dot,fontSize:11}}>{s.msg}</span></div>;
+// ---- AI Sprint Import Modal ----
+const AI_SYSTEM=`You are a project management assistant for the Intact SE Playbook initiative. 
+You will receive the current state of a project planning tool (sections and action items) and a sprint review transcript.
+Analyse the transcript carefully and return ONLY a valid JSON object with this exact structure — no markdown, no explanation:
+
+{
+  "summary": "2-3 sentence plain English summary of what changed this sprint",
+  "sectionUpdates": [
+    {
+      "num": <section number, use string for "11–13">,
+      "changes": {
+        "status": "<new status if changed, else omit>",
+        "flag": "<new flag text if changed, empty string to clear, else omit>",
+        "notes": "<appended note if new context emerged, else omit>",
+        "tasksToAdd": [{"task":"<text>","status":"Not Started"}],
+        "tasksToComplete": ["<exact task text to mark Done>"],
+        "tasksToUpdate": [{"task":"<exact existing task text>","newStatus":"<status>"}]
+      }
+    }
+  ],
+  "actionsToComplete": [<id numbers of actions mentioned as done>],
+  "actionsToAdd": [
+    {"owner":"<David|Steven|Stefan|Tom|All>","action":"<text>","due":"<date>","dep":"<dependency or empty>","status":"Committed","type":"action"}
+  ],
+  "questionsToResolve": [<id numbers of questions that were answered/resolved>],
+  "questionsToAdd": [
+    {"owner":"David","action":"<question text>","due":"TBD","dep":"","status":"Decision Needed","type":"question"}
+  ]
 }
 
-// --- Dashboard ---
-function Dashboard({sections,actions}) {
-  const total=sections.length, done=sections.filter(s=>s.status==="Done").length;
+Rules:
+- Owners must be exactly: David, Steven, Stefan, Tom, or combinations like "Steven + Stefan", or "All"
+- Valid statuses: Not Started, Collecting, In Progress, In Cleanup, Done, Blocked
+- Only include fields that actually changed — omit unchanged fields
+- Be conservative: only mark things Done if explicitly stated as completed in the transcript
+- New action items should reflect commitments made in the meeting
+- Return ONLY the JSON object, nothing else`;
+
+function SprintModal({sections,actions,onApply,onClose}){
+  const [transcript,setTranscript]=useState("");
+  const [stage,setStage]=useState("input"); // input | thinking | review | applying
+  const [diff,setDiff]=useState(null);
+  const [error,setError]=useState("");
+
+  async function analyse(){
+    if(!transcript.trim()){setError("Please paste the transcript first.");return;}
+    setError("");setStage("thinking");
+    const currentState=JSON.stringify({sections:sections.map(s=>({num:s.num,title:s.title,owner:s.owner,status:s.status,flag:s.flag,tasks:s.tasks})),actions});
+    try{
+      const res=await fetch(AI_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4000,system:AI_SYSTEM,messages:[{role:"user",content:`CURRENT STATE:\n${currentState}\n\nSPRINT TRANSCRIPT:\n${transcript}`}]})});
+      const data=await res.json();
+      const text=data.content?.[0]?.text||"";
+      const clean=text.replace(/```json|```/g,"").trim();
+      const parsed=JSON.parse(clean);
+      setDiff(parsed);setStage("review");
+    }catch(e){setError("Failed to analyse transcript. Please try again.");setStage("input");}
+  }
+
+  function applyDiff(){
+    setStage("applying");
+    let newSections=[...sections];
+    let newActions=[...actions];
+    const d=diff;
+
+    // Apply section updates
+    (d.sectionUpdates||[]).forEach(u=>{
+      const idx=newSections.findIndex(s=>String(s.num)===String(u.num));
+      if(idx===-1)return;
+      const s={...newSections[idx]};
+      const c=u.changes||{};
+      if(c.status!==undefined)s.status=c.status;
+      if(c.flag!==undefined)s.flag=c.flag;
+      if(c.notes!==undefined)s.notes=s.notes+(s.notes?"\n\n":"")+c.notes;
+      if(c.tasksToAdd?.length)s.tasks=[...s.tasks,...c.tasksToAdd];
+      if(c.tasksToComplete?.length)s.tasks=s.tasks.map(t=>c.tasksToComplete.includes(t.task)?{...t,status:"Done"}:t);
+      if(c.tasksToUpdate?.length)s.tasks=s.tasks.map(t=>{const u2=c.tasksToUpdate.find(x=>x.task===t.task);return u2?{...t,status:u2.newStatus}:t;});
+      newSections[idx]=s;
+    });
+
+    // Complete actions
+    (d.actionsToComplete||[]).forEach(id=>{newActions=newActions.map(a=>a.id===id?{...a,status:"Done"}:a);});
+
+    // Add new actions
+    const maxId=Math.max(0,...newActions.map(a=>a.id));
+    (d.actionsToAdd||[]).forEach((a,i)=>{newActions.push({...a,id:maxId+i+1});});
+
+    // Resolve questions
+    (d.questionsToResolve||[]).forEach(id=>{newActions=newActions.map(a=>a.id===id?{...a,status:"Done"}:a);});
+
+    // Add new questions
+    const maxId2=Math.max(0,...newActions.map(a=>a.id));
+    (d.questionsToAdd||[]).forEach((q,i)=>{newActions.push({...q,id:maxId2+i+1});});
+
+    onApply(newSections,newActions);
+    onClose();
+  }
+
+  const changeCount=(diff?.sectionUpdates?.length||0)+(diff?.actionsToComplete?.length||0)+(diff?.actionsToAdd?.length||0)+(diff?.questionsToResolve?.length||0)+(diff?.questionsToAdd?.length||0);
+
+  return (
+    <div className="modal-bg" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div className="modal">
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
+          <h2>📋 Update from sprint review</h2>
+          <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,color:"var(--text-tertiary)",lineHeight:1}}>×</button>
+        </div>
+
+        {stage==="input"&&<>
+          <p>Paste your sprint review transcript below. Claude will analyse it, show you a preview of all proposed changes, and apply them with one click.</p>
+          <textarea value={transcript} onChange={e=>setTranscript(e.target.value)} placeholder="Paste transcript here…" style={{width:"100%",height:200,marginBottom:10,fontSize:12,padding:"8px 10px",borderRadius:8,border:"0.5px solid var(--border-s)"}}/>
+          {error&&<div style={{color:"#A32D2D",fontSize:12,marginBottom:10}}>⚠ {error}</div>}
+          <div className="btn-row">
+            <button className="btn-sec" onClick={onClose}>Cancel</button>
+            <button className="btn-primary" onClick={analyse} disabled={!transcript.trim()}>Analyse transcript →</button>
+          </div>
+        </>}
+
+        {stage==="thinking"&&<>
+          <p>Analysing your transcript…</p>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14,padding:"2rem 0"}}>
+            <div style={{width:36,height:36,border:"3px solid var(--border-s)",borderTopColor:"#378ADD",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+            <div style={{fontSize:13,color:"var(--text-secondary)"}} className="pulse">Reading transcript and identifying changes…</div>
+          </div>
+        </>}
+
+        {stage==="review"&&diff&&<>
+          <p style={{marginBottom:8}}><strong>Summary:</strong> {diff.summary}</p>
+          <p style={{marginBottom:10,color:"var(--text-secondary)"}}>Found <strong>{changeCount}</strong> change{changeCount!==1?"s":""} to apply. Review below then confirm.</p>
+          <div className="changes-list">
+            {(diff.sectionUpdates||[]).map((u,i)=>{
+              const s=sections.find(x=>String(x.num)===String(u.num));
+              const c=u.changes||{};
+              const items=[];
+              if(c.status)items.push(`Status → ${c.status}`);
+              if(c.flag!==undefined)items.push(c.flag?`Flag: ${c.flag}`:"Flag cleared");
+              if(c.notes)items.push("Notes updated");
+              (c.tasksToAdd||[]).forEach(t=>items.push(`New task: ${t.task}`));
+              (c.tasksToComplete||[]).forEach(t=>items.push(`Completed: ${t}`));
+              (c.tasksToUpdate||[]).forEach(t=>items.push(`${t.task} → ${t.newStatus}`));
+              return items.map((item,j)=>(
+                <div key={`s${i}${j}`} className="change-item">
+                  <span className="change-tag" style={{background:"#E6F1FB",color:"#185FA5"}}>§{u.num}</span>
+                  <span>{s?.title} — {item}</span>
+                </div>
+              ));
+            })}
+            {(diff.actionsToComplete||[]).map(id=>{const a=actions.find(x=>x.id===id);return <div key={`ac${id}`} className="change-item"><span className="change-tag" style={{background:"#EAF3DE",color:"#3B6D11"}}>Done</span><span>Action #{id}: {a?.action||"Unknown"}</span></div>;})}
+            {(diff.actionsToAdd||[]).map((a,i)=><div key={`aa${i}`} className="change-item"><span className="change-tag" style={{background:"#FAEEDA",color:"#633806"}}>New</span><span>{a.owner} — {a.action} (due: {a.due})</span></div>)}
+            {(diff.questionsToResolve||[]).map(id=>{const q=actions.find(x=>x.id===id);return <div key={`qr${id}`} className="change-item"><span className="change-tag" style={{background:"#EAF3DE",color:"#3B6D11"}}>Resolved</span><span>Q #{id}: {q?.action||"Unknown"}</span></div>;})}
+            {(diff.questionsToAdd||[]).map((q,i)=><div key={`qa${i}`} className="change-item"><span className="change-tag" style={{background:"#EEEDFE",color:"#3C3489"}}>New Q</span><span>{q.action}</span></div>)}
+            {changeCount===0&&<div className="change-item"><span style={{color:"var(--text-secondary)",fontSize:13}}>No changes detected in this transcript.</span></div>}
+          </div>
+          <div className="btn-row">
+            <button className="btn-sec" onClick={()=>{setStage("input");setDiff(null);}}>← Re-paste</button>
+            <button className="btn-sec" onClick={onClose}>Cancel</button>
+            <button className="btn-primary" onClick={applyDiff} disabled={changeCount===0}>Apply {changeCount} change{changeCount!==1?"s":""}</button>
+          </div>
+        </>}
+
+        {stage==="applying"&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14,padding:"2rem 0"}}>
+          <div style={{width:36,height:36,border:"3px solid var(--border-s)",borderTopColor:"#1D9E75",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+          <div style={{fontSize:13,color:"var(--text-secondary)"}}>Applying changes and syncing…</div>
+        </div>}
+      </div>
+    </div>
+  );
+}
+
+// ---- Dashboard ----
+function Dashboard({sections,actions}){
+  const total=sections.length,done=sections.filter(s=>s.status==="Done").length;
   const actv=sections.filter(s=>["In Progress","In Cleanup","Collecting"].includes(s.status)).length;
-  const blkd=sections.filter(s=>s.status==="Blocked").length, ns=sections.filter(s=>s.status==="Not Started").length;
+  const blkd=sections.filter(s=>s.status==="Blocked").length,ns=sections.filter(s=>s.status==="Not Started").length;
   const pct=Math.round((done/total)*100);
   const allT=sections.flatMap(s=>s.tasks.map(t=>({...t,section:s.title,sn:s.num,prio:s.prio})));
   const actT=allT.filter(t=>["In Progress","In Cleanup"].includes(t.status));
@@ -191,14 +322,14 @@ function Dashboard({sections,actions}) {
   const bc=pct>=70?"#1D9E75":pct>=40?"#378ADD":"#BA7517";
   const om={};
   sections.forEach(s=>s.owner.split("+").map(o=>o.trim()).forEach(o=>{if(!om[o])om[o]={total:0,done:0,actv:0};om[o].total++;if(s.status==="Done")om[o].done++;if(["In Progress","In Cleanup","Collecting"].includes(s.status))om[o].actv++;}));
-  return (
+  return(
     <div>
-      <div className="card-secondary" style={{marginBottom:"1rem",padding:"1.25rem 1.5rem"}}>
+      <div className="card-sec" style={{marginBottom:"1rem",padding:"1.25rem 1.5rem"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:10,flexWrap:"wrap",gap:8}}>
           <div><div style={{fontSize:13,color:"var(--text-secondary)",marginBottom:2}}>Overall playbook completion</div><div style={{fontSize:32,fontWeight:500}}>{pct}%</div></div>
           <div style={{fontSize:12,color:"var(--text-secondary)"}}>{done} of {total} sections complete</div>
         </div>
-        <div style={{height:10,background:"var(--bg-primary)",borderRadius:99,overflow:"hidden",border:"0.5px solid var(--border-tertiary)"}}>
+        <div style={{height:10,background:"var(--bg-primary)",borderRadius:99,overflow:"hidden",border:"0.5px solid var(--border-t)"}}>
           <div style={{height:"100%",width:`${pct}%`,background:bc,borderRadius:99}}/>
         </div>
         <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
@@ -207,19 +338,14 @@ function Dashboard({sections,actions}) {
           ))}
         </div>
       </div>
-      <div className="stat-grid-4">
-        <StatCard label="Total tasks"    val={allT.length}/>
-        <StatCard label="Active tasks"   val={actT.length}  color="#185FA5"/>
-        <StatCard label="Open actions"   val={openA.length} color="#633806"/>
-        <StatCard label="Open questions" val={openQ.length} color="#3C3489"/>
-      </div>
+      <div className="g4"><SC label="Total tasks" val={allT.length}/><SC label="Active tasks" val={actT.length} color="#185FA5"/><SC label="Open actions" val={openA.length} color="#633806"/><SC label="Open questions" val={openQ.length} color="#3C3489"/></div>
       <div className="two-col">
         <div className="card">
           <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>Active tasks</div>
           {actT.length===0&&<div style={{fontSize:12,color:"var(--text-tertiary)"}}>No active tasks.</div>}
           {actT.map((t,i)=>(
-            <div key={i} style={{borderBottom:"0.5px solid var(--border-tertiary)",paddingBottom:8,marginBottom:8}}>
-              <div style={{display:"flex",gap:6,marginBottom:3,flexWrap:"wrap"}}><StatusPill status={t.status} small/><Pill label={t.prio} bg={PS[t.prio]?.bg} text={PS[t.prio]?.text}/></div>
+            <div key={i} style={{borderBottom:"0.5px solid var(--border-t)",paddingBottom:8,marginBottom:8}}>
+              <div style={{display:"flex",gap:6,marginBottom:3,flexWrap:"wrap"}}><SPill status={t.status} small/><Pill label={t.prio} bg={PS[t.prio]?.bg} text={PS[t.prio]?.text}/></div>
               <div style={{fontSize:12,lineHeight:1.4,marginBottom:2}}>{t.task}</div>
               <div style={{fontSize:11,color:"var(--text-tertiary)"}}>§{t.sn} {t.section}</div>
             </div>
@@ -229,13 +355,10 @@ function Dashboard({sections,actions}) {
           <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>Open actions</div>
           {openA.length===0&&<div style={{fontSize:12,color:"var(--text-tertiary)"}}>All actions complete!</div>}
           {openA.slice(0,7).map((a,i)=>(
-            <div key={i} style={{borderBottom:"0.5px solid var(--border-tertiary)",paddingBottom:8,marginBottom:8}}>
-              <div style={{display:"flex",gap:6,marginBottom:3,flexWrap:"wrap"}}>
-                <span className="pill" style={{fontSize:11,background:(ASC[a.status]||"#888")+"22",color:ASC[a.status]||"#888"}}>{a.status}</span>
-                <span style={{fontSize:11,color:"var(--text-tertiary)"}}>{a.due}</span>
-              </div>
+            <div key={i} style={{borderBottom:"0.5px solid var(--border-t)",paddingBottom:8,marginBottom:8}}>
+              <div style={{display:"flex",gap:6,marginBottom:3,flexWrap:"wrap"}}><span className="pill" style={{fontSize:11,background:(ASC[a.status]||"#888")+"22",color:ASC[a.status]||"#888"}}>{a.status}</span><span style={{fontSize:11,color:"var(--text-tertiary)"}}>{a.due}</span></div>
               <div style={{fontSize:12,lineHeight:1.4,marginBottom:4}}>{a.action}</div>
-              <OwnerTag owner={a.owner}/>
+              <OTag owner={a.owner}/>
             </div>
           ))}
           {openA.length>7&&<div style={{fontSize:11,color:"var(--text-secondary)"}}>+{openA.length-7} more in Action Items tab</div>}
@@ -249,70 +372,62 @@ function Dashboard({sections,actions}) {
             const p=d.total>0?Math.round((d.done/d.total)*100):0;
             const c=OC[name];
             const myA=actions.filter(a=>a.owner.includes(name)&&a.type==="action"&&a.status!=="Done");
-            return (
-              <div key={name} className="card-secondary" style={{padding:"0.75rem"}}>
+            return(
+              <div key={name} className="card-sec" style={{padding:".75rem"}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
                   <div style={{width:24,height:24,borderRadius:"50%",background:c+"22",border:`1.5px solid ${c}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:600,color:c}}>{name[0]}</div>
                   <span style={{fontSize:13,fontWeight:500}}>{name}</span>
                 </div>
                 <div style={{fontSize:11,color:"var(--text-secondary)",marginBottom:6}}>{d.total} sections · {d.actv} active · {myA.length} actions</div>
                 <div style={{height:5,background:"var(--bg-primary)",borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:c,borderRadius:99}}/></div>
-                <div style={{fontSize:11,color:"var(--text-tertiary)",marginTop:3}}>{p}% sections complete</div>
+                <div style={{fontSize:11,color:"var(--text-tertiary)",marginTop:3}}>{p}% complete</div>
               </div>
             );
           })}
         </div>
       </div>
-      {flags.length>0&&(
-        <div className="card">
-          <div style={{fontSize:13,fontWeight:500,marginBottom:8}}>Active flags & blockers</div>
-          {flags.map((s,i)=><FlagBadge key={i} text={`§${s.num} ${s.title}: ${s.flag}`}/>)}
-        </div>
-      )}
+      {flags.length>0&&<div className="card"><div style={{fontSize:13,fontWeight:500,marginBottom:8}}>Active flags & blockers</div>{flags.map((s,i)=><FlagB key={i} text={`§${s.num} ${s.title}: ${s.flag}`}/>)}</div>}
     </div>
   );
 }
 
-// --- Kanban ---
-function Kanban({sections,setSections}) {
+// ---- Kanban ----
+function Kanban({sections,setSections}){
   const di=useRef(null);
   const onDS=(e,i)=>{di.current=i;e.dataTransfer.effectAllowed="move";};
   const onDrop=(e,col)=>{e.preventDefault();if(di.current===null)return;const n=[...sections];n[di.current]={...n[di.current],status:col};setSections(n);di.current=null;};
   const onDO=e=>e.preventDefault();
-  return (
+  return(
     <div>
-      <div style={{fontSize:12,color:"var(--text-secondary)",marginBottom:12}}>Drag cards between columns or use the dropdown on each card. Changes sync to all team members.</div>
-      <div className="kanban-board">
-        {KANBAN_COLS.map(col=>{
-          const cs=SS[col], colS=sections.filter(s=>s.status===col);
-          return (
-            <div key={col} className="kanban-col" style={{background:"var(--bg-secondary)"}} onDragOver={onDO} onDrop={e=>onDrop(e,col)}>
+      <div style={{fontSize:12,color:"var(--text-secondary)",marginBottom:12}}>Drag cards between columns or use the dropdown. Changes sync to all team members automatically.</div>
+      <div className="kb-board">
+        {KB_COLS.map(col=>{
+          const cs=SS[col],colS=sections.filter(s=>s.status===col);
+          return(
+            <div key={col} className="kb-col" style={{background:"var(--bg-secondary)"}} onDragOver={onDO} onDrop={e=>onDrop(e,col)}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                 <span style={{fontSize:12,fontWeight:500,color:cs.text}}>{col}</span>
                 <span className="pill" style={{fontSize:11,background:cs.bg,color:cs.text,border:`1px solid ${cs.border}`}}>{colS.length}</span>
               </div>
               {colS.map(s=>{
                 const gi=sections.findIndex(x=>x.num===s.num);
-                const td=s.tasks.filter(t=>t.status==="Done").length;
-                const tp=s.tasks.length>0?Math.round((td/s.tasks.length)*100):0;
+                const td=s.tasks.filter(t=>t.status==="Done").length,tp=s.tasks.length>0?Math.round((td/s.tasks.length)*100):0;
                 const oc=OC[s.owner.split(/[+ ]/)[0]]||"#888";
-                return (
-                  <div key={String(s.num)} className="kanban-card" style={{background:"var(--bg-primary)"}} draggable onDragStart={e=>onDS(e,gi)}>
+                return(
+                  <div key={String(s.num)} className="kb-card" style={{background:"var(--bg-primary)"}} draggable onDragStart={e=>onDS(e,gi)}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:5,gap:4}}>
                       <span style={{fontSize:11,fontWeight:500,lineHeight:1.3}}>§{s.num} {s.title}</span>
                       <Pill label={s.prio} bg={PS[s.prio]?.bg} text={PS[s.prio]?.text}/>
                     </div>
-                    <OwnerTag owner={s.owner}/>
+                    <OTag owner={s.owner}/>
                     {s.flag&&<div style={{fontSize:10,color:"#A32D2D",background:"#FCEBEB",borderRadius:4,padding:"2px 6px",marginTop:5}}>⚑ Flagged</div>}
                     <div style={{marginTop:6,fontSize:10,color:"var(--text-tertiary)",marginBottom:3}}>{td}/{s.tasks.length} tasks done</div>
                     <div style={{height:3,background:"var(--bg-secondary)",borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",width:`${tp}%`,background:oc,borderRadius:99}}/></div>
-                    <div style={{marginTop:6}}>
-                      <Sel value={s.status} options={ALL_STATUSES} onChange={v=>{const n=[...sections];n[gi]={...n[gi],status:v};setSections(n);}} small/>
-                    </div>
+                    <div style={{marginTop:6}}><Sel value={s.status} options={ALL_ST} onChange={v=>{const n=[...sections];n[gi]={...n[gi],status:v};setSections(n);}} small/></div>
                   </div>
                 );
               })}
-              {colS.length===0&&<div style={{fontSize:11,color:"var(--text-tertiary)",textAlign:"center",padding:"1rem 0",opacity:0.4}}>Drop here</div>}
+              {colS.length===0&&<div style={{fontSize:11,color:"var(--text-tertiary)",textAlign:"center",padding:"1rem 0",opacity:.4}}>Drop here</div>}
             </div>
           );
         })}
@@ -321,44 +436,39 @@ function Kanban({sections,setSections}) {
   );
 }
 
-// --- Project Plan ---
-function ProjectPlan({sections,setSections}) {
+// ---- Project Plan ----
+function ProjectPlan({sections,setSections}){
   const [open,setOpen]=useState(null);
   const upd=(i,f,v)=>{const n=[...sections];n[i]={...n[i],[f]:v};setSections(n);};
   const updT=(si,ti,f,v)=>{const n=[...sections];const t=[...n[si].tasks];t[ti]={...t[ti],[f]:v};n[si]={...n[si],tasks:t};setSections(n);};
   const addT=si=>{const n=[...sections];n[si].tasks=[...n[si].tasks,{task:"New task",status:"Not Started"}];setSections(n);};
   const rmT=(si,ti)=>{const n=[...sections];n[si].tasks=n[si].tasks.filter((_,j)=>j!==ti);setSections(n);};
-  return (
+  return(
     <div>
-      <div className="stat-grid-4">
-        <StatCard label="Sections" val={sections.length}/>
-        <StatCard label="Prio 1"   val={sections.filter(s=>s.prio==="P1").length}  color="#A32D2D"/>
-        <StatCard label="Active"   val={sections.filter(s=>["In Progress","In Cleanup","Collecting"].includes(s.status)).length} color="#185FA5"/>
-        <StatCard label="Done"     val={sections.filter(s=>s.status==="Done").length} color="#3B6D11"/>
-      </div>
+      <div className="g4"><SC label="Sections" val={sections.length}/><SC label="Prio 1" val={sections.filter(s=>s.prio==="P1").length} color="#A32D2D"/><SC label="Active" val={sections.filter(s=>["In Progress","In Cleanup","Collecting"].includes(s.status)).length} color="#185FA5"/><SC label="Done" val={sections.filter(s=>s.status==="Done").length} color="#3B6D11"/></div>
       {sections.map((s,si)=>(
-        <div key={si} className="section-row">
-          <div className="section-header">
+        <div key={si} className="sec-row">
+          <div className="sec-hdr">
             <span style={{fontSize:12,color:"var(--text-tertiary)",minWidth:20}}>{s.num}</span>
             <span style={{fontSize:13,fontWeight:500,flex:1}}>{s.title}</span>
-            <OwnerTag owner={s.owner}/>
-            <Sel value={s.prio}   options={ALL_PRIORITIES} onChange={v=>upd(si,"prio",v)}   small/>
-            <Sel value={s.status} options={ALL_STATUSES}   onChange={v=>upd(si,"status",v)} small/>
+            <OTag owner={s.owner}/>
+            <Sel value={s.prio} options={ALL_PR} onChange={v=>upd(si,"prio",v)} small/>
+            <Sel value={s.status} options={ALL_ST} onChange={v=>upd(si,"status",v)} small/>
             <button onClick={()=>setOpen(open===si?null:si)} style={{fontSize:12,background:"none",border:"none",color:"var(--text-tertiary)",padding:0}}>{open===si?"▲":"▼"}</button>
           </div>
           {open===si&&(
-            <div style={{padding:"0 1rem 1rem",borderTop:"0.5px solid var(--border-tertiary)"}}>
+            <div style={{padding:"0 1rem 1rem",borderTop:"0.5px solid var(--border-t)"}}>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:10,marginBottom:10}}>
                 <div><div style={{fontSize:11,color:"var(--text-secondary)",marginBottom:4}}>Owner</div><Sel value={s.owner} options={OWNERS} onChange={v=>upd(si,"owner",v)}/></div>
                 <div><div style={{fontSize:11,color:"var(--text-secondary)",marginBottom:4}}>Flag / blocker</div><Txt value={s.flag} onChange={v=>upd(si,"flag",v)}/></div>
               </div>
-              {s.flag&&<FlagBadge text={s.flag}/>}
+              {s.flag&&<FlagB text={s.flag}/>}
               <div style={{fontSize:11,color:"var(--text-secondary)",marginBottom:6}}>Tasks</div>
               {s.tasks.map((t,ti)=>(
                 <div key={ti} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                  <Sel value={t.status} options={ALL_STATUSES} onChange={v=>updT(si,ti,"status",v)} small/>
+                  <Sel value={t.status} options={ALL_ST} onChange={v=>updT(si,ti,"status",v)} small/>
                   <Txt value={t.task} onChange={v=>updT(si,ti,"task",v)} style={{fontSize:12}}/>
-                  <button className="del-btn" onClick={()=>rmT(si,ti)} style={{padding:"2px 7px",fontSize:14,border:"none"}}>×</button>
+                  <button onClick={()=>rmT(si,ti)} style={{fontSize:14,color:"#A32D2D",background:"none",border:"none",padding:"0 4px",flexShrink:0}}>×</button>
                 </div>
               ))}
               <button className="add-btn" onClick={()=>addT(si)}>+ Add task</button>
@@ -371,41 +481,32 @@ function ProjectPlan({sections,setSections}) {
   );
 }
 
-// --- Action Items ---
-function ActionItems({actions,setActions}) {
+// ---- Action Items ----
+function ActionItems({actions,setActions}){
   const [editId,setEditId]=useState(null);
   const [view,setView]=useState("action");
   const upd=(id,f,v)=>setActions(prev=>prev.map(a=>a.id===id?{...a,[f]:v}:a));
   const add=type=>{const id=Math.max(0,...actions.map(a=>a.id))+1;setActions([...actions,{id,owner:"David",action:type==="question"?"New open question":"New action item",due:"TBD",dep:"",status:type==="question"?"Decision Needed":"Committed",type}]);};
   const rm=id=>setActions(prev=>prev.filter(a=>a.id!==id));
   const filtered=actions.filter(a=>a.type===view);
-  const ac=actions.filter(a=>a.type==="action"), qc=actions.filter(a=>a.type==="question");
-  return (
+  const ac=actions.filter(a=>a.type==="action"),qc=actions.filter(a=>a.type==="question");
+  return(
     <div>
       <div style={{display:"flex",gap:4,marginBottom:"1.25rem"}}>
         {[["action","Action Items"],["question","Open Questions"]].map(([v,l])=>(
           <button key={v} className={`tab-btn ${view===v?"active":""}`} onClick={()=>setView(v)}>{l}</button>
         ))}
       </div>
-      {view==="action"&&<div className="stat-grid-4">
-        <StatCard label="Total"           val={ac.length}/>
-        <StatCard label="Urgent"          val={ac.filter(a=>a.status==="Urgent").length}          color="#A32D2D"/>
-        <StatCard label="Decision needed" val={ac.filter(a=>a.status==="Decision Needed").length} color="#633806"/>
-        <StatCard label="Done"            val={ac.filter(a=>a.status==="Done").length}            color="#3B6D11"/>
-      </div>}
-      {view==="question"&&<div className="stat-grid-3">
-        <StatCard label="Total"    val={qc.length}/>
-        <StatCard label="Open"     val={qc.filter(a=>a.status!=="Done").length} color="#3C3489"/>
-        <StatCard label="Resolved" val={qc.filter(a=>a.status==="Done").length} color="#3B6D11"/>
-      </div>}
+      {view==="action"&&<div className="g4"><SC label="Total" val={ac.length}/><SC label="Urgent" val={ac.filter(a=>a.status==="Urgent").length} color="#A32D2D"/><SC label="Decision needed" val={ac.filter(a=>a.status==="Decision Needed").length} color="#633806"/><SC label="Done" val={ac.filter(a=>a.status==="Done").length} color="#3B6D11"/></div>}
+      {view==="question"&&<div className="g3"><SC label="Total" val={qc.length}/><SC label="Open" val={qc.filter(a=>a.status!=="Done").length} color="#3C3489"/><SC label="Resolved" val={qc.filter(a=>a.status==="Done").length} color="#3B6D11"/></div>}
       {filtered.map(a=>(
-        <div key={a.id} style={{background:"var(--bg-primary)",border:`0.5px solid ${a.status==="Urgent"?"#F09595":a.status==="Done"?"#97C459":a.type==="question"?"#AFA9EC":"var(--border-tertiary)"}`,borderRadius:8,padding:"0.75rem 1rem",marginBottom:8}}>
+        <div key={a.id} style={{background:"var(--bg-primary)",border:`0.5px solid ${a.status==="Urgent"?"#F09595":a.status==="Done"?"#97C459":a.type==="question"?"#AFA9EC":"var(--border-t)"}`,borderRadius:8,padding:".75rem 1rem",marginBottom:8}}>
           <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
             <div style={{flex:1}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
                 {a.type==="question"&&<span className="pill" style={{fontSize:11,background:"#EEEDFE",color:"#3C3489"}}>?</span>}
-                <Sel value={a.status} options={a.type==="question"?["Decision Needed","In Progress","Done"]:ALL_ACTION_STATUSES} onChange={v=>upd(a.id,"status",v)} small/>
-                {editId===a.id?<Sel value={a.owner} options={OWNERS} onChange={v=>upd(a.id,"owner",v)} small/>:<OwnerTag owner={a.owner}/>}
+                <Sel value={a.status} options={a.type==="question"?["Decision Needed","In Progress","Done"]:ALL_AS} onChange={v=>upd(a.id,"status",v)} small/>
+                {editId===a.id?<Sel value={a.owner} options={OWNERS} onChange={v=>upd(a.id,"owner",v)} small/>:<OTag owner={a.owner}/>}
                 {editId===a.id?<Txt value={a.due} onChange={v=>upd(a.id,"due",v)} style={{fontSize:11,width:100}}/>:<span style={{fontSize:11,color:"var(--text-tertiary)"}}>Due: {a.due}</span>}
               </div>
               {editId===a.id?<Txt value={a.action} onChange={v=>upd(a.id,"action",v)} multi/>:<div style={{fontSize:13,color:a.status==="Done"?"var(--text-secondary)":"var(--text-primary)",textDecoration:a.status==="Done"?"line-through":"none",lineHeight:1.5}}>{a.action}</div>}
@@ -413,85 +514,82 @@ function ActionItems({actions,setActions}) {
               {a.dep&&editId!==a.id&&<div style={{fontSize:11,color:"#633806",background:"#FAEEDA",borderRadius:4,padding:"3px 8px",marginTop:6,display:"inline-block"}}>◆ {a.dep}</div>}
             </div>
             <div style={{display:"flex",gap:4,flexShrink:0}}>
-              <button className="inline-btn" onClick={()=>setEditId(editId===a.id?null:a.id)}>{editId===a.id?"Done":"Edit"}</button>
-              <button className="del-btn" onClick={()=>rm(a.id)}>×</button>
+              <button style={{fontSize:11,padding:"3px 8px",borderRadius:6,border:"0.5px solid var(--border-s)",background:"none",color:"var(--text-secondary)"}} onClick={()=>setEditId(editId===a.id?null:a.id)}>{editId===a.id?"Done":"Edit"}</button>
+              <button style={{fontSize:11,padding:"3px 8px",borderRadius:6,border:"0.5px solid #F09595",background:"none",color:"#A32D2D"}} onClick={()=>rm(a.id)}>×</button>
             </div>
           </div>
         </div>
       ))}
-      <button className="primary-btn" onClick={()=>add(view)} style={{marginTop:4}}>+ Add {view==="question"?"open question":"action item"}</button>
+      <button style={{fontSize:13,padding:"7px 16px",borderRadius:8,border:"0.5px solid var(--border-s)",background:"var(--bg-secondary)",color:"var(--text-primary)",marginTop:4}} onClick={()=>add(view)}>+ Add {view==="question"?"open question":"action item"}</button>
     </div>
   );
 }
 
-// --- Root ---
-function App() {
+// ---- Root ----
+function App(){
   const [tab,setTab]=useState(0);
-  const [sections,setSectionsState]=useState(DEF_SECTIONS);
-  const [actions,setActionsState]=useState(DEF_ACTIONS);
+  const [sections,setSS]=useState(DEF_S);
+  const [actions,setAS]=useState(DEF_A);
   const [loaded,setLoaded]=useState(false);
-  const [syncStatus,setSyncStatus]=useState("idle");
+  const [sync,setSync]=useState("idle");
+  const [showImport,setShowImport]=useState(false);
   const timer=useRef(null);
 
   useEffect(()=>{
-    dbGet().then(data=>{
-      if(data?.sections) setSectionsState(data.sections);
-      if(data?.actions)  setActionsState(data.actions);
+    dbGet().then(d=>{
+      if(d?.sections)setSS(d.sections);
+      if(d?.actions)setAS(d.actions);
       setLoaded(true);
     }).catch(()=>setLoaded(true));
   },[]);
 
   const persist=useCallback((s,a)=>{
-    if(timer.current) clearTimeout(timer.current);
-    setSyncStatus("syncing");
+    if(timer.current)clearTimeout(timer.current);
+    setSync("syncing");
     timer.current=setTimeout(()=>{
-      dbSet({sections:s,actions:a}).then(()=>{
-        setSyncStatus("saved");
-        setTimeout(()=>setSyncStatus("idle"),3000);
-      }).catch(()=>setSyncStatus("error"));
+      dbSet({sections:s,actions:a}).then(()=>{setSync("saved");setTimeout(()=>setSync("idle"),3000);}).catch(()=>setSync("error"));
     },900);
   },[]);
 
-  const setSections=v=>{setSectionsState(v);persist(v,actions);};
-  const setActions =v=>{setActionsState(v); persist(sections,v);};
+  const setSections=v=>{setSS(v);persist(v,actions);};
+  const setActions=v=>{setAS(v);persist(sections,v);};
 
-  const reset=()=>{
-    if(!confirm("Reset all data to original defaults? This cannot be undone.")) return;
-    setSectionsState(DEF_SECTIONS); setActionsState(DEF_ACTIONS);
-    persist(DEF_SECTIONS,DEF_ACTIONS);
-  };
+  const applyImport=(newS,newA)=>{setSS(newS);setAS(newA);persist(newS,newA);};
 
-  if(!loaded) return (
+  const reset=()=>{if(!confirm("Reset all data to original defaults? This cannot be undone."))return;setSS(DEF_S);setAS(DEF_A);persist(DEF_S,DEF_A);};
+
+  if(!loaded)return(
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",flexDirection:"column",gap:12}}>
-      <div style={{width:32,height:32,border:"3px solid var(--border-secondary)",borderTopColor:"#378ADD",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+      <div style={{width:36,height:36,border:"3px solid var(--border-s)",borderTopColor:"#378ADD",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
       <div style={{fontSize:14,color:"var(--text-secondary)"}}>Loading shared workspace…</div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
-  return (
+  return(
     <div>
+      {showImport&&<SprintModal sections={sections} actions={actions} onApply={applyImport} onClose={()=>setShowImport(false)}/>}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"1.25rem",flexWrap:"wrap",gap:8}}>
         <div>
           <h1 style={{fontSize:20,fontWeight:500,marginBottom:4}}>SE Playbook — Project Planning Tool</h1>
-          <p style={{fontSize:13,color:"var(--text-secondary)"}}>Intact · Sprint review: Mar 27, 2026 · David · Steven · Stefan · Tom</p>
+          <p style={{fontSize:13,color:"var(--text-secondary)"}}>Intact · Shared workspace · David · Steven · Stefan · Tom</p>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <SyncBar status={syncStatus}/>
-          <button className="inline-btn" onClick={reset} style={{fontSize:11}}>Reset to defaults</button>
+        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <SyncDot status={sync}/>
+          <button onClick={()=>setShowImport(true)} style={{fontSize:13,padding:"7px 14px",borderRadius:8,border:"none",background:"#378ADD",color:"#fff",fontWeight:500}}>📋 Update from sprint</button>
+          <button onClick={reset} style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"0.5px solid var(--border-s)",background:"none",color:"var(--text-tertiary)"}}>Reset</button>
         </div>
       </div>
-      <div className="tab-bar">
+      <div style={{display:"flex",gap:4,marginBottom:"1.25rem",flexWrap:"wrap"}}>
         {TABS.map((t,i)=><button key={t} className={`tab-btn ${tab===i?"active":""}`} onClick={()=>setTab(i)}>{t}</button>)}
       </div>
-      {tab===0&&<Dashboard  sections={sections} actions={actions}/>}
-      {tab===1&&<Kanban     sections={sections} setSections={setSections}/>}
+      {tab===0&&<Dashboard sections={sections} actions={actions}/>}
+      {tab===1&&<Kanban sections={sections} setSections={setSections}/>}
       {tab===2&&<ProjectPlan sections={sections} setSections={setSections}/>}
-      {tab===3&&<ActionItems actions={actions}  setActions={setActions}/>}
+      {tab===3&&<ActionItems actions={actions} setActions={setActions}/>}
     </div>
   );
 }
-
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
