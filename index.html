@@ -14,7 +14,6 @@
 @media(prefers-color-scheme:dark){:root{--bp:#1e1e1c;--bs:#2a2a28;--bt:#333330;--tp:#f0ede6;--ts:#a0a09a;--tt:#6a6a64;--bdt:rgba(255,255,255,0.1);--bds:rgba(255,255,255,0.18);--bdp:rgba(255,255,255,0.28)}}
 body{font-family:var(--fn);background:var(--bt);color:var(--tp);min-height:100vh}
 #root{max-width:1000px;margin:0 auto;padding:1.5rem 1rem;position:relative;z-index:1}
-.app-wrap{position:relative;min-height:100vh}
 input,textarea,select{font-family:var(--fn);background:var(--bp);color:var(--tp);border:0.5px solid var(--bdt);border-radius:var(--r);padding:5px 9px;font-size:13px;outline:none;transition:border-color .15s}
 input:focus,textarea:focus,select:focus{border-color:var(--bds)}
 button{font-family:var(--fn);cursor:pointer}
@@ -51,9 +50,7 @@ textarea{resize:vertical;line-height:1.5}
 .change-item{padding:10px 14px;border-bottom:0.5px solid var(--bdt);font-size:13px;display:flex;gap:10px;align-items:flex-start}
 .change-item:last-child{border-bottom:none}
 .change-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;flex-shrink:0;margin-top:1px}
-.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
-.app-bg{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1}
-.app-bg svg{width:100%;height:100%;position:absolute;inset:0;display:block}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;overflow:hidden}
 .login-box{background:var(--bp);border:0.5px solid var(--bds);border-radius:16px;padding:2rem;width:100%;max-width:380px}
 .login-box h1{font-size:22px;font-weight:500;margin-bottom:4px}
 .login-box .sub{font-size:13px;color:var(--ts);margin-bottom:1.5rem}
@@ -69,7 +66,10 @@ textarea{resize:vertical;line-height:1.5}
 .tag-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .tag-item{display:flex;align-items:center;gap:4px;background:var(--bs);border:0.5px solid var(--bdt);border-radius:6px;padding:3px 8px;font-size:12px}
 .my-todo-row{background:var(--bp);border:0.5px solid var(--bdt);border-radius:8px;padding:.75rem 1rem;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px}
-.my-todo-row.done-row{opacity:.6}
+.initiative-card{background:var(--bp);border:0.5px solid var(--bdt);border-radius:var(--rl);padding:1.25rem;cursor:pointer;transition:border-color .15s,box-shadow .15s;position:relative}
+.initiative-card:hover{border-color:var(--bds)}
+.initiative-card.active-init{border:1.5px solid #378ADD}
+.init-picker{display:flex;gap:4px;align-items:center;background:var(--bs);border:0.5px solid var(--bdt);border-radius:var(--r);padding:4px 10px;font-size:13px;cursor:pointer;color:var(--tp)}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:700px){.g4{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}.kb-board{grid-template-columns:repeat(2,1fr)}}
 </style>
@@ -85,8 +85,14 @@ async function sbGet(t,f=""){const r=await fetch(`${SB}/rest/v1/${t}${f?`?${f}`:
 async function sbPatch(t,f,b){await fetch(`${SB}/rest/v1/${t}?${f}`,{method:"PATCH",headers:{...HDR,Prefer:"return=minimal"},body:JSON.stringify(b)});}
 async function sbPost(t,b){const r=await fetch(`${SB}/rest/v1/${t}`,{method:"POST",headers:{...HDR,Prefer:"return=representation"},body:JSON.stringify(b)});return r.json();}
 async function sbDel(t,f){await fetch(`${SB}/rest/v1/${t}?${f}`,{method:"DELETE",headers:HDR});}
-async function dbGetState(){const r=await sbGet("playbook","id=eq.state&select=data");return r?.[0]?.data||null;}
-async function dbSetState(d){await sbPatch("playbook","id=eq.state",{data:d,updated_at:new Date().toISOString()});}
+async function dbGetInitiatives(){const r=await sbGet("playbook","id=eq.initiatives&select=data");return r?.[0]?.data||{list:[]};}
+async function dbSetInitiatives(d){await sbPatch("playbook","id=eq.initiatives",{data:d,updated_at:new Date().toISOString()});}
+async function dbGetState(iid){const r=await sbGet("playbook",`id=eq.initiative:${iid}&select=data`);return r?.[0]?.data||null;}
+async function dbSetState(iid,d){
+  const r=await sbGet("playbook",`id=eq.initiative:${iid}&select=id`);
+  if(r&&r.length>0){await sbPatch("playbook",`id=eq.initiative:${iid}`,{data:d,updated_at:new Date().toISOString()});}
+  else{await sbPost("playbook",{id:`initiative:${iid}`,data:d});}
+}
 async function dbGetUsers(){return sbGet("playbook_users","select=username,role");}
 async function dbGetConfig(){return sbGet("playbook_config","select=key,value");}
 async function dbSetConfig(k,v){await sbPatch("playbook_config",`key=eq.${k}`,{value:v,updated_at:new Date().toISOString()});}
@@ -94,48 +100,8 @@ async function dbAddUser(u,p,r){return sbPost("playbook_users",{username:u,passw
 async function dbDelUser(u){return sbDel("playbook_users",`username=eq.${u}`);}
 async function dbSetPw(u,p){await sbPatch("playbook_users",`username=eq.${u}`,{password_hash:p});}
 async function dbVerify(u,p){const r=await sbGet("playbook_users",`username=eq.${encodeURIComponent(u)}&select=username,password_hash,role`);if(!r||!r.length)return null;const x=r[0];return x.password_hash===p?{username:x.username,role:x.role}:null;}
-// For forgot password — admin can see all users with a recovery token field (we store a temp code)
 async function dbSetRecovery(u,code){await sbPatch("playbook_users",`username=eq.${u}`,{password_hash:`RESET:${code}`});}
-async function dbGetAllUsers(){return sbGet("playbook_users","select=username,password_hash,role");}
 
-const DEF_S=[
-  {num:1,title:"Introduction",owner:"David",prio:"P1",status:"In Progress",notes:"Partial content drafted. To take over relevant content from Sales Playbook.",flag:"",tasks:[{task:"Draft purpose, scope, and relationship to Sales Playbook",status:"In Progress"},{task:"Define when to use the handbook",status:"In Progress"}]},
-  {num:2,title:"SE Onboarding & Rollout Plan",owner:"David",prio:"P2",status:"Not Started",notes:"No documented progress.",flag:"Not started — not discussed in sprint review.",tasks:[{task:"Write 30/60/90/120/150 day ramp-up overview",status:"Not Started"},{task:"Define key milestones and KPIs",status:"Not Started"},{task:"Document internal systems & tools access",status:"Not Started"},{task:"Outline demo certification and shadowing process",status:"Not Started"}]},
-  {num:3,title:"SE Role in the Sales Process",owner:"Steven",prio:"P1",status:"In Progress",notes:"Steven spent ~2hrs updating the outline. ~50% complete.",flag:"Boundary between Steven's section and Stefan's Solution Design phase must be agreed.",tasks:[{task:"Document SE responsibilities by stage",status:"In Progress"},{task:"Write SE vs. AE ownership (RACI)",status:"In Progress"},{task:"Define technical win criteria",status:"In Progress"},{task:"Align on AESE collaboration boundaries with Stefan",status:"Not Started"}]},
-  {num:4,title:"Technical Discovery",owner:"Steven + Tom",prio:"P1",status:"In Cleanup",notes:"Tom has a 10-page Word doc. Needs restructuring into generic vs. detailed scoping.",flag:"",tasks:[{task:"Split discovery doc into generic + detailed + sector-specific sections",status:"Not Started"},{task:"Use Certified Humane transcript as additional AI input",status:"Not Started"},{task:"Steven: review Tom's discovery doc and add content",status:"Not Started"},{task:"Merge Steven's Word docs with Tom's discovery doc",status:"Not Started"},{task:"Upload finalised doc to SharePoint",status:"Not Started"}]},
-  {num:5,title:"Demo Execution",owner:"Steven + Tom",prio:"P1",status:"Not Started",notes:"Next priority after Discovery and Solution Design boundary is set.",flag:"Intact AI demo script and visual assets needed ahead of Q2 launch.",tasks:[{task:"Define standard vs. custom demo framework",status:"Not Started"},{task:"David: draft demo narrative structure (Pain → Solution → Value)",status:"Not Started"},{task:"Compile one-liner objection responses (27 tracked in Gong)",status:"Not Started"},{task:"David: complete Intact AI demo script from Gong recordings",status:"In Progress"},{task:"David: secure Intact AI screenshots/mockups",status:"Not Started"}]},
-  {num:6,title:"Solution Design Phase",owner:"Stefan",prio:"P1",status:"In Progress",notes:"Stefan has 20+ page draft. Entry/exit triggers defined. Two output tracks: Solution Concept and SOW.",flag:"Roles & responsibilities within the phase unresolved — decision required from David/Armin/Brian.",tasks:[{task:"Finalise entry/exit trigger definition",status:"In Progress"},{task:"Clarify roles & responsibilities (decision needed)",status:"In Progress"},{task:"Incorporate feedback from morning deep-dive session",status:"Not Started"},{task:"Define two tracks — SAW vs. Assessment",status:"In Progress"},{task:"Create assessment agenda template",status:"Not Started"},{task:"Create workshop preparation checklist",status:"Not Started"},{task:"Compact 20+ page draft into checklist-driven version",status:"Not Started"},{task:"Align on demo/discovery boundary with Steven",status:"Not Started"},{task:"Build 70–80% AI-assisted doc generation workflow in Claude",status:"Not Started"}]},
-  {num:7,title:"Handling Technical Objections",owner:"David",prio:"P2",status:"Not Started",notes:"Prio 2. David is responsible.",flag:"",tasks:[{task:"Compile objection categories: Security, Integrations, Data Residency, Performance",status:"Not Started"},{task:"Define escalation paths to Product, Security, Legal",status:"Not Started"},{task:"Draft competitive positioning tips and battlecard reference points",status:"Not Started"}]},
-  {num:8,title:"Cross-Functional Collaboration",owner:"David",prio:"P2",status:"Not Started",notes:"No SE collaboration content exists yet.",flag:"No content exists — risk of indefinite deferral.",tasks:[{task:"Document AE/SE working rhythms, syncs, messaging alignment",status:"Not Started"},{task:"Describe collaboration with Product, Implementation, CS, Legal",status:"Not Started"},{task:"Write guide to running internal Deal Board reviews as an SE",status:"Not Started"}]},
-  {num:9,title:"Commercial Awareness for SEs",owner:"David",prio:"P2",status:"Not Started",notes:"Prio 2. No progress documented.",flag:"",tasks:[{task:"Document ARR, TCV, licensing basics for SEs",status:"Not Started"},{task:"Describe SE role in pricing and strategy conversations",status:"Not Started"},{task:"Write RFP partnering and build-vs-buy talking points",status:"Not Started"}]},
-  {num:10,title:"Core Tools & Resources",owner:"David",prio:"P1",status:"Collecting",notes:"David gathering resources. SharePoint cleanup needed. Claude slide template project underway.",flag:"SharePoint disorganisation is a team blocker.",tasks:[{task:"Build resource repository (presentations, templates, SLAs, IP links)",status:"In Progress"},{task:"Clean up SharePoint — remove duplicates",status:"Not Started"},{task:"Organise Teams channel with pinned links",status:"Not Started"},{task:"Feed slide templates into Claude for company-wide consistency",status:"In Progress"},{task:"Document internal templates index",status:"Not Started"}]},
-  {num:"11–13",title:"Performance, Scenarios & Appendices",owner:"David",prio:"P3",status:"Not Started",notes:"Prio 2–3. No discussion in sprint.",flag:"No confirmed owner engagement — risk of indefinite deferral.",tasks:[{task:"Draft performance expectations and career development section",status:"Not Started"},{task:"Write SE scenarios & playbooks (SMB vs. Enterprise)",status:"Not Started"},{task:"Compile appendices A–I",status:"Not Started"}]},
-];
-const DEF_A=[
-  {id:1,owner:"Steven",action:"Review Tom's 10-page discovery document and add inline feedback",due:"Mon Mar 30",dep:"",status:"Committed",type:"action"},
-  {id:2,owner:"Steven + Stefan",action:"30-min alignment call: agree on boundary between Demo/Discovery and Solution Design",due:"Mon Mar 30",dep:"Must happen before either section can be finalised",status:"Scheduled",type:"action"},
-  {id:3,owner:"Tom",action:"Split discovery document into three sections: generic, detailed, sector-specific scoping",due:"Next sprint",dep:"",status:"Committed",type:"action"},
-  {id:4,owner:"Tom",action:"Use Certified Humane discovery transcript as AI input to enrich sector discovery questions",due:"Next sprint",dep:"",status:"Committed",type:"action"},
-  {id:5,owner:"Tom",action:"Upload/link discovery document to SharePoint outline",due:"Mon Mar 30",dep:"",status:"Committed",type:"action"},
-  {id:6,owner:"Stefan",action:"Continue Solution Design phase draft: incorporate morning deep-dive feedback",due:"Next sprint",dep:"",status:"Committed",type:"action"},
-  {id:7,owner:"Stefan",action:"Create/revise assessment agenda template and workshop preparation checklist",due:"Next sprint",dep:"",status:"Committed",type:"action"},
-  {id:8,owner:"Stefan",action:"Compact 20+ page playbook into shorter, checklist-driven summary",due:"Next sprint",dep:"",status:"Committed",type:"action"},
-  {id:9,owner:"Stefan",action:"Build 70–80% AI-assisted doc generation workflow in Claude",due:"Ongoing",dep:"Awaiting full Claude company rollout",status:"In Progress",type:"action"},
-  {id:10,owner:"David",action:"Complete Intact AI demo script from Gong recordings",due:"This week",dep:"",status:"In Progress",type:"action"},
-  {id:11,owner:"David",action:"Secure Intact AI screenshots and UI mockups for SE demos (Q2 launch)",due:"This week",dep:"Coordinate with Tom/Jochen — not yet shareable",status:"Urgent",type:"action"},
-  {id:12,owner:"David",action:"Build resource repository — compile all relevant presentations, templates, SLAs, IPLP links",due:"Next sprint",dep:"",status:"In Progress",type:"action"},
-  {id:13,owner:"David",action:"Clean up SharePoint: remove duplicates, establish a clear folder structure",due:"Next sprint",dep:"",status:"Committed",type:"action"},
-  {id:14,owner:"David",action:"Forward Global Sales Meeting invitation to Stefan",due:"Immediate",dep:"",status:"Committed",type:"action"},
-  {id:15,owner:"David",action:"Feed company slide templates into Claude for consistent AI-generated presentations",due:"Ongoing",dep:"",status:"In Progress",type:"action"},
-  {id:16,owner:"All",action:"Align on company-wide AI tooling: standardise on Claude — avoid building custom GPTs in ChatGPT",due:"Before GPT license expiry",dep:"GPT licenses active ~2–3 more months",status:"Decision Needed",type:"action"},
-  {id:17,owner:"David",action:"Where exactly does the SE discovery/demo section end and Stefan's Solution Design phase begin?",due:"Mon Mar 30",dep:"",status:"Decision Needed",type:"question"},
-  {id:18,owner:"David",action:"What is the formal name for the SAW output document?",due:"Next sprint",dep:"",status:"Decision Needed",type:"question"},
-  {id:19,owner:"David",action:"Who has final approval authority on roles & responsibilities within the Solution Design phase?",due:"Next sprint",dep:"",status:"Decision Needed",type:"question"},
-  {id:20,owner:"David",action:"Is there a formal deadline for playbook v1.0, or is it delivery-driven by the Intact AI launch?",due:"Next sprint",dep:"",status:"Decision Needed",type:"question"},
-  {id:21,owner:"David",action:"Will the playbook remain a Word/SharePoint document or migrate to another format?",due:"TBD",dep:"",status:"Decision Needed",type:"question"},
-  {id:22,owner:"David",action:"How will Gong data (27 tracked demo objections) be formally integrated into Section 5?",due:"TBD",dep:"",status:"Decision Needed",type:"question"},
-  {id:23,owner:"David",action:"When will the Intact AI presentation from the Global Sales Meeting be shareable for SE demo prep?",due:"TBD",dep:"",status:"Decision Needed",type:"question"},
-];
 const DEF_CFG={statuses:["Not Started","Collecting","In Progress","In Cleanup","Done","Blocked"],priorities:["P1","P2","P3"],owners:["David","Steven","Stefan","Tom"],action_statuses:["Urgent","In Progress","Scheduled","Committed","Decision Needed","Done"]};
 const SS_F={Done:{bg:"#EAF3DE",text:"#3B6D11",border:"#97C459"},"In Progress":{bg:"#E6F1FB",text:"#185FA5",border:"#85B7EB"},"In Cleanup":{bg:"#FAEEDA",text:"#633806",border:"#EF9F27"},"Not Started":{bg:"#F1EFE8",text:"#5F5E5A",border:"#B4B2A9"},Blocked:{bg:"#FCEBEB",text:"#A32D2D",border:"#F09595"},Collecting:{bg:"#EEEDFE",text:"#3C3489",border:"#AFA9EC"}};
 const PS_F={P1:{bg:"#FCEBEB",text:"#A32D2D"},P2:{bg:"#FAEEDA",text:"#633806"},P3:{bg:"#F1EFE8",text:"#5F5E5A"}};
@@ -144,7 +110,34 @@ const OCP=["#378ADD","#1D9E75","#7F77DD","#D85A30","#BA7517","#D4537E","#0F6E56"
 const OC_B={David:"#378ADD",Steven:"#1D9E75",Stefan:"#7F77DD",Tom:"#D85A30"};
 function oc(n,owners){return OC_B[n]||(OCP[owners.indexOf(n)%OCP.length]||"#888");}
 
-// --- Primitives ---
+const DEF_SECTIONS=[
+  {num:1,title:"Introduction",owner:"David",prio:"P1",status:"In Progress",notes:"Partial content drafted.",flag:"",tasks:[{task:"Draft purpose, scope, and relationship to Sales Playbook",status:"In Progress"},{task:"Define when to use the handbook",status:"In Progress"}]},
+  {num:2,title:"SE Onboarding & Rollout Plan",owner:"David",prio:"P2",status:"Not Started",notes:"No documented progress.",flag:"Not started — not discussed in sprint review.",tasks:[{task:"Write 30/60/90/120/150 day ramp-up overview",status:"Not Started"},{task:"Define key milestones and KPIs",status:"Not Started"},{task:"Document internal systems & tools access",status:"Not Started"},{task:"Outline demo certification and shadowing process",status:"Not Started"}]},
+  {num:3,title:"SE Role in the Sales Process",owner:"Steven",prio:"P1",status:"In Progress",notes:"Steven spent ~2hrs updating the outline. ~50% complete.",flag:"Boundary between Steven's section and Stefan's Solution Design phase must be agreed.",tasks:[{task:"Document SE responsibilities by stage",status:"In Progress"},{task:"Write SE vs. AE ownership (RACI)",status:"In Progress"},{task:"Define technical win criteria",status:"In Progress"},{task:"Align on AESE collaboration boundaries with Stefan",status:"Not Started"}]},
+  {num:4,title:"Technical Discovery",owner:"Steven + Tom",prio:"P1",status:"In Cleanup",notes:"Tom has a 10-page Word doc. Needs restructuring.",flag:"",tasks:[{task:"Split discovery doc into generic + detailed + sector-specific sections",status:"Not Started"},{task:"Steven: review Tom's discovery doc and add content",status:"Not Started"},{task:"Upload finalised doc to SharePoint",status:"Not Started"}]},
+  {num:5,title:"Demo Execution",owner:"Steven + Tom",prio:"P1",status:"Not Started",notes:"Next priority after Discovery and Solution Design boundary is set.",flag:"Intact AI demo script and visual assets needed ahead of Q2 launch.",tasks:[{task:"Define standard vs. custom demo framework",status:"Not Started"},{task:"David: complete Intact AI demo script from Gong recordings",status:"In Progress"},{task:"David: secure Intact AI screenshots/mockups",status:"Not Started"}]},
+  {num:6,title:"Solution Design Phase",owner:"Stefan",prio:"P1",status:"In Progress",notes:"Stefan has 20+ page draft. Entry/exit triggers defined.",flag:"Roles & responsibilities within the phase unresolved — decision required from David/Armin/Brian.",tasks:[{task:"Finalise entry/exit trigger definition",status:"In Progress"},{task:"Clarify roles & responsibilities",status:"In Progress"},{task:"Create assessment agenda template",status:"Not Started"},{task:"Compact 20+ page draft into checklist-driven version",status:"Not Started"},{task:"Build 70–80% AI-assisted doc generation workflow in Claude",status:"Not Started"}]},
+  {num:7,title:"Handling Technical Objections",owner:"David",prio:"P2",status:"Not Started",notes:"Prio 2.",flag:"",tasks:[{task:"Compile objection categories",status:"Not Started"},{task:"Define escalation paths to Product, Security, Legal",status:"Not Started"}]},
+  {num:8,title:"Cross-Functional Collaboration",owner:"David",prio:"P2",status:"Not Started",notes:"No SE collaboration content exists yet.",flag:"No content exists — risk of indefinite deferral.",tasks:[{task:"Document AE/SE working rhythms",status:"Not Started"},{task:"Write guide to running internal Deal Board reviews as an SE",status:"Not Started"}]},
+  {num:9,title:"Commercial Awareness for SEs",owner:"David",prio:"P2",status:"Not Started",notes:"Prio 2.",flag:"",tasks:[{task:"Document ARR, TCV, licensing basics for SEs",status:"Not Started"},{task:"Write RFP partnering and build-vs-buy talking points",status:"Not Started"}]},
+  {num:10,title:"Core Tools & Resources",owner:"David",prio:"P1",status:"Collecting",notes:"David gathering resources. SharePoint cleanup needed.",flag:"SharePoint disorganisation is a team blocker.",tasks:[{task:"Build resource repository",status:"In Progress"},{task:"Clean up SharePoint",status:"Not Started"},{task:"Feed slide templates into Claude",status:"In Progress"}]},
+  {num:"11–13",title:"Performance, Scenarios & Appendices",owner:"David",prio:"P3",status:"Not Started",notes:"Prio 2–3.",flag:"No confirmed owner engagement.",tasks:[{task:"Draft performance expectations section",status:"Not Started"},{task:"Compile appendices A–I",status:"Not Started"}]},
+];
+const DEF_ACTIONS=[
+  {id:1,owner:"Steven",action:"Review Tom's discovery document and add inline feedback",due:"Mon Mar 30",dep:"",status:"Committed",type:"action"},
+  {id:2,owner:"Steven + Stefan",action:"30-min alignment call: agree on boundary between Demo/Discovery and Solution Design",due:"Mon Mar 30",dep:"Must happen before either section can be finalised",status:"Scheduled",type:"action"},
+  {id:3,owner:"Tom",action:"Split discovery document into three sections",due:"Next sprint",dep:"",status:"Committed",type:"action"},
+  {id:4,owner:"Stefan",action:"Continue Solution Design phase draft",due:"Next sprint",dep:"",status:"Committed",type:"action"},
+  {id:5,owner:"David",action:"Complete Intact AI demo script from Gong recordings",due:"This week",dep:"",status:"In Progress",type:"action"},
+  {id:6,owner:"David",action:"Build resource repository",due:"Next sprint",dep:"",status:"In Progress",type:"action"},
+  {id:7,owner:"David",action:"Clean up SharePoint",due:"Next sprint",dep:"",status:"Committed",type:"action"},
+  {id:8,owner:"All",action:"Align on company-wide AI tooling: standardise on Claude",due:"Before GPT license expiry",dep:"GPT licenses active ~2–3 more months",status:"Decision Needed",type:"action"},
+  {id:9,owner:"David",action:"Where exactly does the SE discovery/demo section end and Stefan's Solution Design phase begin?",due:"Mon Mar 30",dep:"",status:"Decision Needed",type:"question"},
+  {id:10,owner:"David",action:"Who has final approval authority on roles & responsibilities within the Solution Design phase?",due:"Next sprint",dep:"",status:"Decision Needed",type:"question"},
+  {id:11,owner:"David",action:"Is there a formal deadline for playbook v1.0, or is it delivery-driven by the Intact AI launch?",due:"Next sprint",dep:"",status:"Decision Needed",type:"question"},
+];
+
+// --- UI Primitives ---
 function SPill({status,small}){const s=SS_F[status]||SS_F["Not Started"];return <span className="pill" style={{fontSize:small?11:12,background:s.bg,color:s.text,border:`1px solid ${s.border}`}}>{status}</span>;}
 function Pill({label,bg,text}){return <span className="pill" style={{background:bg||"#eee",color:text||"#333"}}>{label}</span>;}
 function FlagB({text}){if(!text)return null;return <div className="flag-b"><span style={{flexShrink:0}}>⚑</span><span>{text}</span></div>;}
@@ -155,18 +148,14 @@ function SC({label,val,color}){return <div className="sc"><div style={{fontSize:
 function SyncDot({s}){const m={syncing:{c:"#EF9F27",t:"Syncing…"},saved:{c:"#1D9E75",t:"Saved ✓"},error:{c:"#A32D2D",t:"Sync failed"}};const x=m[s];if(!x)return null;return <span style={{fontSize:11,color:x.c,display:"flex",alignItems:"center",gap:5}}><span style={{width:7,height:7,borderRadius:"50%",background:x.c,display:"inline-block"}}/>{x.t}</span>;}
 function Spinner({size=32}){return <div style={{width:size,height:size,border:"3px solid var(--bds)",borderTopColor:"#378ADD",borderRadius:"50%",animation:"spin .8s linear infinite"}}/>;}
 
-// --- Shared Background ---
+// --- Background (login only) ---
 function AppBackground(){
   return(
-    <div className="app-bg">
-      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <div style={{position:"absolute",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
+      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" style={{width:"100%",height:"100%",position:"absolute",inset:0}} xmlns="http://www.w3.org/2000/svg">
         <style>{`
-          @media(prefers-color-scheme:dark){
-            .lb-base{fill:#1a1f2e}.lb-grid{stroke:rgba(55,138,221,0.05)}.lb-node{fill:#1e2d42;stroke:rgba(55,138,221,0.15)}.lb-node-accent{fill:#1a3a2a;stroke:rgba(29,158,117,0.18)}.lb-node-warm{fill:#2e2416;stroke:rgba(186,117,23,0.15)}.lb-line{stroke:rgba(55,138,221,0.07)}.lb-line-g{stroke:rgba(29,158,117,0.06)}.lb-dot{fill:rgba(55,138,221,0.1)}.lb-dot-g{fill:rgba(29,158,117,0.08)}.lb-badge{fill:#1e3a5a;stroke:rgba(55,138,221,0.18)}.lb-badge-g{fill:#183326;stroke:rgba(29,158,117,0.18)}.lb-text{fill:rgba(55,138,221,0.25)}.lb-text-g{fill:rgba(29,158,117,0.22)}.lb-pbar-bg{fill:#1e2535}.lb-pbar-fg{fill:rgba(55,138,221,0.35)}.lb-pbar-fg-g{fill:rgba(29,158,117,0.35)}.lb-kanban{fill:#1a2030;stroke:rgba(55,138,221,0.1)}.lb-kcard{fill:#1d2840;stroke:rgba(55,138,221,0.12)}.lb-kcard-g{fill:#182a22;stroke:rgba(29,158,117,0.14)}.lb-check{stroke:rgba(29,158,117,0.3)}.lb-arc{stroke:rgba(55,138,221,0.06)}
-          }
-          @media(prefers-color-scheme:light){
-            .lb-base{fill:#eef2f8}.lb-grid{stroke:rgba(55,138,221,0.045)}.lb-node{fill:rgba(255,255,255,0.6);stroke:rgba(55,138,221,0.12)}.lb-node-accent{fill:rgba(240,250,245,0.6);stroke:rgba(29,158,117,0.14)}.lb-node-warm{fill:rgba(253,246,236,0.6);stroke:rgba(186,117,23,0.12)}.lb-line{stroke:rgba(55,138,221,0.08)}.lb-line-g{stroke:rgba(29,158,117,0.06)}.lb-dot{fill:rgba(55,138,221,0.08)}.lb-dot-g{fill:rgba(29,158,117,0.07)}.lb-badge{fill:rgba(232,243,252,0.7);stroke:rgba(55,138,221,0.18)}.lb-badge-g{fill:rgba(230,247,239,0.7);stroke:rgba(29,158,117,0.18)}.lb-text{fill:rgba(55,138,221,0.28)}.lb-text-g{fill:rgba(29,158,117,0.26)}.lb-pbar-bg{fill:rgba(221,232,245,0.6)}.lb-pbar-fg{fill:rgba(55,138,221,0.3)}.lb-pbar-fg-g{fill:rgba(29,158,117,0.3)}.lb-kanban{fill:rgba(245,248,253,0.55);stroke:rgba(55,138,221,0.1)}.lb-kcard{fill:rgba(255,255,255,0.55);stroke:rgba(55,138,221,0.11)}.lb-kcard-g{fill:rgba(245,253,249,0.55);stroke:rgba(29,158,117,0.12)}.lb-check{stroke:rgba(29,158,117,0.25)}.lb-arc{stroke:rgba(55,138,221,0.05)}
-          }
+          @media(prefers-color-scheme:dark){.lb-base{fill:#1a1f2e}.lb-grid{stroke:rgba(55,138,221,0.05)}.lb-node{fill:#1e2d42;stroke:rgba(55,138,221,0.15)}.lb-node-accent{fill:#1a3a2a;stroke:rgba(29,158,117,0.18)}.lb-node-warm{fill:#2e2416;stroke:rgba(186,117,23,0.15)}.lb-line{stroke:rgba(55,138,221,0.07)}.lb-line-g{stroke:rgba(29,158,117,0.06)}.lb-dot{fill:rgba(55,138,221,0.1)}.lb-dot-g{fill:rgba(29,158,117,0.08)}.lb-badge{fill:#1e3a5a;stroke:rgba(55,138,221,0.18)}.lb-badge-g{fill:#183326;stroke:rgba(29,158,117,0.18)}.lb-text{fill:rgba(55,138,221,0.25)}.lb-text-g{fill:rgba(29,158,117,0.22)}.lb-pbar-bg{fill:#1e2535}.lb-pbar-fg{fill:rgba(55,138,221,0.35)}.lb-pbar-fg-g{fill:rgba(29,158,117,0.35)}.lb-kanban{fill:#1a2030;stroke:rgba(55,138,221,0.1)}.lb-kcard{fill:#1d2840;stroke:rgba(55,138,221,0.12)}.lb-kcard-g{fill:#182a22;stroke:rgba(29,158,117,0.14)}.lb-check{stroke:rgba(29,158,117,0.3)}.lb-arc{stroke:rgba(55,138,221,0.06)}}
+          @media(prefers-color-scheme:light){.lb-base{fill:#eef2f8}.lb-grid{stroke:rgba(55,138,221,0.045)}.lb-node{fill:rgba(255,255,255,0.6);stroke:rgba(55,138,221,0.12)}.lb-node-accent{fill:rgba(240,250,245,0.6);stroke:rgba(29,158,117,0.14)}.lb-node-warm{fill:rgba(253,246,236,0.6);stroke:rgba(186,117,23,0.12)}.lb-line{stroke:rgba(55,138,221,0.08)}.lb-line-g{stroke:rgba(29,158,117,0.06)}.lb-dot{fill:rgba(55,138,221,0.08)}.lb-dot-g{fill:rgba(29,158,117,0.07)}.lb-badge{fill:rgba(232,243,252,0.7);stroke:rgba(55,138,221,0.18)}.lb-badge-g{fill:rgba(230,247,239,0.7);stroke:rgba(29,158,117,0.18)}.lb-text{fill:rgba(55,138,221,0.28)}.lb-text-g{fill:rgba(29,158,117,0.26)}.lb-pbar-bg{fill:rgba(221,232,245,0.6)}.lb-pbar-fg{fill:rgba(55,138,221,0.3)}.lb-pbar-fg-g{fill:rgba(29,158,117,0.3)}.lb-kanban{fill:rgba(245,248,253,0.55);stroke:rgba(55,138,221,0.1)}.lb-kcard{fill:rgba(255,255,255,0.55);stroke:rgba(55,138,221,0.11)}.lb-kcard-g{fill:rgba(245,253,249,0.55);stroke:rgba(29,158,117,0.12)}.lb-check{stroke:rgba(29,158,117,0.25)}.lb-arc{stroke:rgba(55,138,221,0.05)}}
         `}</style>
         <rect className="lb-base" width="1440" height="900"/>
         {Array.from({length:16},(_,i)=><line key={`gv${i}`} className="lb-grid" x1={i*96} y1="0" x2={i*96} y2="900" strokeWidth="0.5"/>)}
@@ -174,40 +163,37 @@ function AppBackground(){
         <path className="lb-arc" d="M0 600 Q400 200 800 500 Q1100 700 1440 300" fill="none" strokeWidth="1"/>
         <path className="lb-arc" d="M200 900 Q600 400 1000 600 Q1300 750 1440 500" fill="none" strokeWidth="0.8"/>
         {[{x:60,y:120,w:140,h:44,label:"Discovery",cls:"lb-node-accent",tcls:"lb-text-g"},{x:60,y:200,w:140,h:44,label:"Demo",cls:"lb-node",tcls:"lb-text"},{x:60,y:280,w:140,h:44,label:"Solution Design",cls:"lb-node",tcls:"lb-text"},{x:60,y:360,w:140,h:44,label:"Assessment",cls:"lb-node-warm",tcls:"lb-text"},{x:60,y:440,w:140,h:44,label:"Offer",cls:"lb-node",tcls:"lb-text"},{x:60,y:520,w:140,h:44,label:"Close",cls:"lb-node-accent",tcls:"lb-text-g"}].map((n,i)=>(
-          <g key={`pipe${i}`}><rect className={n.cls} x={n.x} y={n.y} width={n.w} height={n.h} rx="6" strokeWidth="0.8"/><text className={n.tcls} x={n.x+n.w/2} y={n.y+n.h/2+5} textAnchor="middle" fontSize="11" fontWeight="500">{n.label}</text></g>
+          <g key={`p${i}`}><rect className={n.cls} x={n.x} y={n.y} width={n.w} height={n.h} rx="6" strokeWidth="0.8"/><text className={n.tcls} x={n.x+n.w/2} y={n.y+n.h/2+5} textAnchor="middle" fontSize="11" fontWeight="500">{n.label}</text></g>
         ))}
-        {[120+44,200+44,280+44,360+44,440+44].map((y,i)=><line key={`pl${i}`} className="lb-line" x1="130" y1={y} x2="130" y2={y+12} strokeWidth="1" strokeDasharray="3 2"/>)}
+        {[164,244,324,404,484].map((y,i)=><line key={`pl${i}`} className="lb-line" x1="130" y1={y} x2="130" y2={y+12} strokeWidth="1" strokeDasharray="3 2"/>)}
         {[{y:132,w:90,cls:"lb-pbar-fg-g"},{y:212,w:70,cls:"lb-pbar-fg"},{y:292,w:55,cls:"lb-pbar-fg"},{y:372,w:40,cls:"lb-pbar-fg"},{y:452,w:20,cls:"lb-pbar-fg"},{y:532,w:10,cls:"lb-pbar-fg-g"}].map((b,i)=>(
           <g key={`pb${i}`}><rect className="lb-pbar-bg" x="215" y={b.y} width="90" height="8" rx="4"/><rect className={b.cls} x="215" y={b.y} width={b.w} height="8" rx="4"/></g>
         ))}
         {[340,420,500,580].map((x,ci)=>(
-          <g key={`kc${ci}`}><rect className="lb-kanban" x={x} y={60} width={68} height={520} rx="8" strokeWidth="0.8"/>{[0,1,2].map(ri=><rect key={`kcard${ci}${ri}`} className={ri===0&&ci===1?"lb-kcard-g":"lb-kcard"} x={x+6} y={100+ri*100} width={56} height={70} rx="5" strokeWidth="0.7"/>)}<rect className="lb-pbar-bg" x={x+10} y={74} width={48} height={6} rx="3"/><rect className={ci===1?"lb-pbar-fg-g":"lb-pbar-fg"} x={x+10} y={74} width={[30,48,20,12][ci]} height={6} rx="3"/></g>
+          <g key={`kc${ci}`}><rect className="lb-kanban" x={x} y={60} width={68} height={520} rx="8" strokeWidth="0.8"/>{[0,1,2].map(ri=><rect key={ri} className={ri===0&&ci===1?"lb-kcard-g":"lb-kcard"} x={x+6} y={100+ri*100} width={56} height={70} rx="5" strokeWidth="0.7"/>)}<rect className="lb-pbar-bg" x={x+10} y={74} width={48} height={6} rx="3"/><rect className={ci===1?"lb-pbar-fg-g":"lb-pbar-fg"} x={x+10} y={74} width={[30,48,20,12][ci]} height={6} rx="3"/></g>
         ))}
         <rect className="lb-node" x={680} y={60} width={260} height={160} rx="10" strokeWidth="0.8"/>
         {[{x:696,y:80,w:56,h:44,v:"9",sub:"sections",cls:"lb-badge"},{x:762,y:80,w:56,h:44,v:"4",sub:"active",cls:"lb-badge-g"},{x:828,y:80,w:56,h:44,v:"17",sub:"actions",cls:"lb-badge"},{x:894,y:80,w:36,h:44,v:"7",sub:"q's",cls:"lb-badge"}].map((s,i)=>(
-          <g key={`stat${i}`}><rect className={s.cls} x={s.x} y={s.y} width={s.w} height={s.h} rx="6" strokeWidth="0.7"/><text className={i===1?"lb-text-g":"lb-text"} x={s.x+s.w/2} y={s.y+18} textAnchor="middle" fontSize="16" fontWeight="700">{s.v}</text><text className={i===1?"lb-text-g":"lb-text"} x={s.x+s.w/2} y={s.y+35} textAnchor="middle" fontSize="9" opacity="0.8">{s.sub}</text></g>
+          <g key={`st${i}`}><rect className={s.cls} x={s.x} y={s.y} width={s.w} height={s.h} rx="6" strokeWidth="0.7"/><text className={i===1?"lb-text-g":"lb-text"} x={s.x+s.w/2} y={s.y+18} textAnchor="middle" fontSize="16" fontWeight="700">{s.v}</text><text className={i===1?"lb-text-g":"lb-text"} x={s.x+s.w/2} y={s.y+35} textAnchor="middle" fontSize="9" opacity="0.8">{s.sub}</text></g>
         ))}
         <rect className="lb-pbar-bg" x={696} y={146} width={228} height={10} rx="5"/>
         <rect className="lb-pbar-fg-g" x={696} y={146} width={80} height={10} rx="5"/>
-        <text className="lb-text" x={696} y={175} fontSize="10" opacity="0.7">Overall completion  27%</text>
-        <text className="lb-text-g" x={840} y={175} fontSize="10" opacity="0.7">6 of 11 Prio-1 in progress</text>
         <rect className="lb-node" x={680} y={240} width={260} height={130} rx="10" strokeWidth="0.8"/>
         {[{name:"David",pct:0.45,cls:"lb-pbar-fg"},{name:"Steven",pct:0.6,cls:"lb-pbar-fg-g"},{name:"Stefan",pct:0.7,cls:"lb-pbar-fg-g"},{name:"Tom",pct:0.3,cls:"lb-pbar-fg"}].map((o,i)=>(
           <g key={`ow${i}`}><text className="lb-text" x={696} y={262+i*28} fontSize="10" fontWeight="500">{o.name}</text><rect className="lb-pbar-bg" x={736} y={252+i*28} width={180} height={8} rx="4"/><rect className={o.cls} x={736} y={252+i*28} width={180*o.pct} height={8} rx="4"/></g>
         ))}
         <rect className="lb-node" x={680} y={390} width={260} height={200} rx="10" strokeWidth="0.8"/>
-        {[{txt:"Review discovery doc",done:true,cls:"lb-kcard-g"},{txt:"Boundary alignment call",done:false,cls:"lb-kcard"},{txt:"Compact solution design draft",done:false,cls:"lb-kcard"},{txt:"Clean up SharePoint",done:false,cls:"lb-kcard"},{txt:"Complete Intact AI demo script",done:false,cls:"lb-kcard"}].map((a,i)=>(
-          <g key={`ai${i}`}><rect className={a.cls} x={696} y={405+i*36} width={228} height={26} rx="5" strokeWidth="0.6"/>{a.done&&<path className="lb-check" d={`M702 ${418+i*36}l4 4 7-7`} fill="none" strokeWidth="1.5" strokeLinecap="round"/>}<text className={a.done?"lb-text-g":"lb-text"} x={718} y={422+i*36} fontSize="10" opacity={a.done?0.6:0.85}>{a.txt}</text></g>
+        {[{txt:"Review discovery doc",done:true},{txt:"Boundary alignment call",done:false},{txt:"Compact solution design draft",done:false},{txt:"Clean up SharePoint",done:false},{txt:"Complete Intact AI demo script",done:false}].map((a,i)=>(
+          <g key={`ai${i}`}><rect className={a.done?"lb-kcard-g":"lb-kcard"} x={696} y={405+i*36} width={228} height={26} rx="5" strokeWidth="0.6"/>{a.done&&<path className="lb-check" d={`M702 ${418+i*36}l4 4 7-7`} fill="none" strokeWidth="1.5" strokeLinecap="round"/>}<text className={a.done?"lb-text-g":"lb-text"} x={718} y={422+i*36} fontSize="10" opacity={a.done?0.6:0.85}>{a.txt}</text></g>
         ))}
-        {[{x:1000,y:100},{x:1080,y:160},{x:1160,y:100},{x:1120,y:240},{x:1040,y:300},{x:1200,y:300},{x:1060,y:420},{x:1180,y:380},{x:1280,y:160},{x:1320,y:280},{x:1260,y:400}].map((n,i)=><circle key={`nd${i}`} className={i%3===1?"lb-dot-g":"lb-dot"} cx={n.x} cy={n.y} r={i%4===0?10:7}/>)}
-        {[[0,1],[1,2],[1,3],[3,4],[3,5],[4,6],[5,7],[2,8],[8,9],[7,10],[9,10]].map(([a,b],i)=>{const nodes=[{x:1000,y:100},{x:1080,y:160},{x:1160,y:100},{x:1120,y:240},{x:1040,y:300},{x:1200,y:300},{x:1060,y:420},{x:1180,y:380},{x:1280,y:160},{x:1320,y:280},{x:1260,y:400}];return <line key={`edge${i}`} className={i%2===0?"lb-line":"lb-line-g"} x1={nodes[a].x} y1={nodes[a].y} x2={nodes[b].x} y2={nodes[b].y} strokeWidth="0.8"/>;})}
+        {[{x:1000,y:100},{x:1080,y:160},{x:1160,y:100},{x:1120,y:240},{x:1040,y:300},{x:1200,y:300},{x:1060,y:420},{x:1180,y:380},{x:1280,y:160},{x:1320,y:280},{x:1260,y:400}].map((n,i)=><circle key={i} className={i%3===1?"lb-dot-g":"lb-dot"} cx={n.x} cy={n.y} r={i%4===0?10:7}/>)}
+        {[[0,1],[1,2],[1,3],[3,4],[3,5],[4,6],[5,7],[2,8],[8,9],[7,10],[9,10]].map(([a,b],i)=>{const nd=[{x:1000,y:100},{x:1080,y:160},{x:1160,y:100},{x:1120,y:240},{x:1040,y:300},{x:1200,y:300},{x:1060,y:420},{x:1180,y:380},{x:1280,y:160},{x:1320,y:280},{x:1260,y:400}];return <line key={i} className={i%2===0?"lb-line":"lb-line-g"} x1={nd[a].x} y1={nd[a].y} x2={nd[b].x} y2={nd[b].y} strokeWidth="0.8"/>;})}
         <rect className="lb-node" x={60} y={640} width={880} height={80} rx="10" strokeWidth="0.8"/>
         {["Sprint 1","Sprint 2","Sprint 3","Sprint 4","Sprint 5","Sprint 6","Sprint 7","Sprint 8"].map((s,i)=>(
           <g key={`sp${i}`}><rect className={i<3?"lb-badge-g":i===3?"lb-badge":"lb-kanban"} x={80+i*105} y={658} width={90} height={44} rx="6" strokeWidth="0.7"/><text className={i<3?"lb-text-g":"lb-text"} x={125+i*105} y={685} textAnchor="middle" fontSize="10" fontWeight="500">{s}</text><text className={i<3?"lb-text-g":"lb-text"} x={125+i*105} y={697} textAnchor="middle" fontSize="9" opacity="0.7">{i<3?"Done":i===3?"Active":"Upcoming"}</text></g>
         ))}
         <line className="lb-line" x1="80" y1="700" x2="940" y2="700" strokeWidth="0.5" strokeDasharray="4 3"/>
-        {[0,1,2,3,4,5,6,7].map(i=><circle key={`ms${i}`} className={i<3?"lb-dot-g":i===3?"lb-dot":"lb-dot"} cx={125+i*105} cy={700} r={i===3?5:3} opacity={i>3?0.4:1}/>)}
-        <text className="lb-text" x={1390} y={80} textAnchor="end" fontSize="11" opacity="0.35">SE Playbook Project Planner</text>
+        {[0,1,2,3,4,5,6,7].map(i=><circle key={i} className={i<3?"lb-dot-g":"lb-dot"} cx={125+i*105} cy={700} r={i===3?5:3} opacity={i>3?0.4:1}/>)}
       </svg>
     </div>
   );
@@ -215,65 +201,20 @@ function AppBackground(){
 
 // --- Login ---
 function LoginScreen({onLogin}){
-  const [view,setView]=useState("login"); // login | forgot | reset
-  const [uname,setUname]=useState("");
-  const [pw,setPw]=useState("");
-  const [newPw,setNewPw]=useState("");
-  const [confirmPw,setConfirmPw]=useState("");
-  const [resetCode,setResetCode]=useState("");
-  const [generatedCode,setGeneratedCode]=useState("");
-  const [err,setErr]=useState("");
-  const [ok,setOk]=useState("");
-  const [loading,setLoading]=useState(false);
-
-  async function login(e){
-    e.preventDefault();if(!uname||!pw){setErr("Please enter your name and password.");return;}
-    setLoading(true);setErr("");
-    const user=await dbVerify(uname,pw);
-    setLoading(false);
-    if(!user){setErr("Incorrect name or password. Please try again.");return;}
-    sessionStorage.setItem("sep_user",JSON.stringify(user));
-    onLogin(user);
-  }
-
-  async function requestReset(e){
-    e.preventDefault();if(!uname){setErr("Please enter your name.");return;}
-    setLoading(true);setErr("");
-    const rows=await sbGet("playbook_users",`username=eq.${encodeURIComponent(uname)}&select=username`);
-    setLoading(false);
-    if(!rows||!rows.length){setErr("No account found with that name.");return;}
-    const code=Math.floor(100000+Math.random()*900000).toString();
-    await dbSetRecovery(uname,code);
-    setGeneratedCode(code);
-    setOk("");
-    setView("reset");
-  }
-
-  async function doReset(e){
-    e.preventDefault();
-    if(!resetCode){setErr("Please enter the reset code from your admin.");return;}
-    if(newPw.length<6){setErr("New password must be at least 6 characters.");return;}
-    if(newPw!==confirmPw){setErr("Passwords do not match.");return;}
-    setLoading(true);setErr("");
-    const rows=await sbGet("playbook_users",`username=eq.${encodeURIComponent(uname)}&select=username,password_hash`);
-    setLoading(false);
-    if(!rows||!rows.length){setErr("User not found.");return;}
-    const stored=rows[0].password_hash;
-    if(stored!==`RESET:${resetCode}`){setErr("Incorrect reset code. Please ask your admin for the code.");return;}
-    await dbSetPw(uname,newPw);
-    setOk("Password reset successfully! You can now sign in.");
-    setView("login");setPw("");setResetCode("");setNewPw("");setConfirmPw("");
-  }
-
+  const [view,setView]=useState("login");
+  const [uname,setUname]=useState("");const [pw,setPw]=useState("");
+  const [newPw,setNewPw]=useState("");const [confirmPw,setConfirmPw]=useState("");
+  const [resetCode,setResetCode]=useState("");const [generatedCode,setGeneratedCode]=useState("");
+  const [err,setErr]=useState("");const [ok,setOk]=useState("");const [loading,setLoading]=useState(false);
+  async function login(e){e.preventDefault();if(!uname||!pw){setErr("Please enter your name and password.");return;}setLoading(true);setErr("");const user=await dbVerify(uname,pw);setLoading(false);if(!user){setErr("Incorrect name or password.");return;}sessionStorage.setItem("sep_user",JSON.stringify(user));onLogin(user);}
+  async function requestReset(e){e.preventDefault();if(!uname){setErr("Please enter your name.");return;}setLoading(true);setErr("");const rows=await sbGet("playbook_users",`username=eq.${encodeURIComponent(uname)}&select=username`);setLoading(false);if(!rows||!rows.length){setErr("No account found with that name.");return;}const code=Math.floor(100000+Math.random()*900000).toString();await dbSetRecovery(uname,code);setGeneratedCode(code);setView("reset");}
+  async function doReset(e){e.preventDefault();if(!resetCode){setErr("Please enter the reset code.");return;}if(newPw.length<6){setErr("New password must be at least 6 characters.");return;}if(newPw!==confirmPw){setErr("Passwords do not match.");return;}setLoading(true);setErr("");const rows=await sbGet("playbook_users",`username=eq.${encodeURIComponent(uname)}&select=username,password_hash`);setLoading(false);if(!rows||!rows.length){setErr("User not found.");return;}if(rows[0].password_hash!==`RESET:${resetCode}`){setErr("Incorrect reset code.");return;}await dbSetPw(uname,newPw);setOk("Password reset successfully!");setView("login");setPw("");}
   return(
     <div className="login-wrap">
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <AppBackground/>
       <div className="login-box" style={{position:"relative",zIndex:1,boxShadow:"0 4px 32px rgba(0,0,0,0.12)"}}>
-
         <h1>SE Playbook Project Planner</h1>
         <p className="sub">Intact Solution Engineering</p>
-
         {view==="login"&&<>
           {err&&<div className="err-msg">{err}</div>}
           {ok&&<div className="ok-msg">{ok}</div>}
@@ -282,33 +223,25 @@ function LoginScreen({onLogin}){
             <div className="form-group"><label>Password</label><input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="Enter your password"/></div>
             <button type="submit" className="btn-p" style={{width:"100%",marginTop:8}} disabled={loading}>{loading?"Signing in…":"Sign in →"}</button>
           </form>
-          <div style={{textAlign:"center",marginTop:14}}>
-            <button onClick={()=>{setView("forgot");setErr("");setOk("");}} style={{background:"none",border:"none",fontSize:12,color:"var(--ts)",textDecoration:"underline",cursor:"pointer"}}>Forgot password?</button>
-          </div>
+          <div style={{textAlign:"center",marginTop:14}}><button onClick={()=>{setView("forgot");setErr("");setOk("");}} style={{background:"none",border:"none",fontSize:12,color:"var(--ts)",textDecoration:"underline",cursor:"pointer"}}>Forgot password?</button></div>
         </>}
-
         {view==="forgot"&&<>
-          <div style={{marginBottom:12}}><button onClick={()=>{setView("login");setErr("");}} style={{background:"none",border:"none",fontSize:12,color:"var(--ts)",cursor:"pointer"}}>← Back to sign in</button></div>
-          <p style={{marginBottom:14}}>Enter your name and we'll generate a reset code. You'll need to share this code with your admin (David) who can pass it to you.</p>
+          <div style={{marginBottom:12}}><button onClick={()=>{setView("login");setErr("");}} style={{background:"none",border:"none",fontSize:12,color:"var(--ts)",cursor:"pointer"}}>← Back</button></div>
+          <p>Enter your name to generate a reset code to share with your admin.</p>
           {err&&<div className="err-msg">{err}</div>}
           <form onSubmit={requestReset}>
             <div className="form-group"><label>Your name</label><input value={uname} onChange={e=>setUname(e.target.value)} placeholder="e.g. Steven" autoFocus/></div>
             <button type="submit" className="btn-p" style={{width:"100%"}} disabled={loading}>{loading?"Generating…":"Generate reset code"}</button>
           </form>
         </>}
-
         {view==="reset"&&<>
-          <div style={{marginBottom:12}}><button onClick={()=>{setView("login");setErr("");}} style={{background:"none",border:"none",fontSize:12,color:"var(--ts)",cursor:"pointer"}}>← Back to sign in</button></div>
-          {generatedCode&&<div style={{background:"#FAEEDA",border:"1px solid #EF9F27",borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:13,color:"#633806"}}>
-            <div style={{fontWeight:500,marginBottom:4}}>Reset code generated</div>
-            <div>Your reset code is: <strong style={{fontSize:16,letterSpacing:2}}>{generatedCode}</strong></div>
-            <div style={{fontSize:11,marginTop:4,color:"#854F0B"}}>Share this with {uname} — they'll need it to set a new password. This code is single-use.</div>
-          </div>}
+          <div style={{marginBottom:12}}><button onClick={()=>{setView("login");setErr("");}} style={{background:"none",border:"none",fontSize:12,color:"var(--ts)",cursor:"pointer"}}>← Back</button></div>
+          {generatedCode&&<div style={{background:"#FAEEDA",border:"1px solid #EF9F27",borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:13,color:"#633806"}}><div style={{fontWeight:500,marginBottom:4}}>Reset code generated</div><div>Code: <strong style={{fontSize:16,letterSpacing:2}}>{generatedCode}</strong></div><div style={{fontSize:11,marginTop:4}}>Share this with {uname} — single use.</div></div>}
           {err&&<div className="err-msg">{err}</div>}
           <form onSubmit={doReset}>
-            <div className="form-group"><label>Reset code (from admin)</label><input value={resetCode} onChange={e=>setResetCode(e.target.value)} placeholder="6-digit code"/></div>
+            <div className="form-group"><label>Reset code</label><input value={resetCode} onChange={e=>setResetCode(e.target.value)} placeholder="6-digit code"/></div>
             <div className="form-group"><label>New password</label><input type="password" value={newPw} onChange={e=>setNewPw(e.target.value)} placeholder="At least 6 characters"/></div>
-            <div className="form-group"><label>Confirm new password</label><input type="password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)} placeholder="Repeat new password"/></div>
+            <div className="form-group"><label>Confirm new password</label><input type="password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)}/></div>
             <button type="submit" className="btn-p" style={{width:"100%"}} disabled={loading}>{loading?"Resetting…":"Reset password"}</button>
           </form>
         </>}
@@ -319,33 +252,13 @@ function LoginScreen({onLogin}){
 
 // --- Change Password Modal ---
 function ChangePwModal({user,onClose}){
-  const [cur,setCur]=useState("");
-  const [nw,setNw]=useState("");
-  const [conf,setConf]=useState("");
-  const [err,setErr]=useState("");
-  const [ok,setOk]=useState(false);
-  const [loading,setLoading]=useState(false);
-  async function submit(e){
-    e.preventDefault();
-    if(!cur||!nw||!conf){setErr("Please fill in all fields.");return;}
-    if(nw.length<6){setErr("New password must be at least 6 characters.");return;}
-    if(nw!==conf){setErr("New passwords do not match.");return;}
-    setLoading(true);setErr("");
-    const verified=await dbVerify(user.username,cur);
-    if(!verified){setLoading(false);setErr("Current password is incorrect.");return;}
-    await dbSetPw(user.username,nw);
-    setLoading(false);setOk(true);
-    const updated={...user};
-    sessionStorage.setItem("sep_user",JSON.stringify(updated));
-    setTimeout(()=>onClose(true),1500);
-  }
+  const [cur,setCur]=useState("");const [nw,setNw]=useState("");const [conf,setConf]=useState("");
+  const [err,setErr]=useState("");const [ok,setOk]=useState(false);const [loading,setLoading]=useState(false);
+  async function submit(e){e.preventDefault();if(!cur||!nw||!conf){setErr("Please fill in all fields.");return;}if(nw.length<6){setErr("New password must be at least 6 characters.");return;}if(nw!==conf){setErr("Passwords do not match.");return;}setLoading(true);setErr("");const verified=await dbVerify(user.username,cur);if(!verified){setLoading(false);setErr("Current password is incorrect.");return;}await dbSetPw(user.username,nw);setLoading(false);setOk(true);setTimeout(()=>onClose(true),1500);}
   return(
     <div className="modal-bg" onClick={e=>{if(e.target===e.currentTarget)onClose(false);}}>
       <div className="modal" style={{maxWidth:400}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-          <h2 style={{marginBottom:0}}>Change password</h2>
-          <button onClick={()=>onClose(false)} style={{background:"none",border:"none",fontSize:20,color:"var(--tt)",lineHeight:1}}>×</button>
-        </div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><h2 style={{marginBottom:0}}>Change password</h2><button onClick={()=>onClose(false)} style={{background:"none",border:"none",fontSize:20,color:"var(--tt)",lineHeight:1}}>×</button></div>
         {ok?<div className="ok-msg">Password changed successfully!</div>:<>
           {err&&<div className="err-msg">{err}</div>}
           <form onSubmit={submit}>
@@ -360,325 +273,94 @@ function ChangePwModal({user,onClose}){
   );
 }
 
-// --- My To-Dos ---
-function MyTodos({user,sections,actions,setSections,setActions,cfg}){
-  const {owners,statuses,action_statuses}=cfg;
-  const name=user.username;
-
-  // Tasks from sections where owner includes this user
-  const myTasks=sections.flatMap((s,si)=>
-    s.tasks.map((t,ti)=>({...t,sectionTitle:s.title,sectionNum:s.num,si,ti,source:"task"}))
-  ).filter(t=>sections[t.si].owner.split("+").map(o=>o.trim()).includes(name));
-
-  // Action items assigned to this user
-  const myActions=actions.filter(a=>a.type==="action"&&a.owner.split("+").map(o=>o.trim()).includes(name));
-
-  const openTasks=myTasks.filter(t=>t.status!=="Done");
-  const doneTasks=myTasks.filter(t=>t.status==="Done");
-  const openActions=myActions.filter(a=>a.status!=="Done");
-  const doneActions=myActions.filter(a=>a.status==="Done");
-  const col=oc(name,owners);
-
-  function markTask(si,ti,status){
-    const n=[...sections];const t=[...n[si].tasks];t[ti]={...t[ti],status};n[si]={...n[si],tasks:t};setSections(n);
-  }
-  function markAction(id,status){setActions(prev=>prev.map(a=>a.id===id?{...a,status}:a));}
-
+// --- Initiative Picker Screen ---
+function InitiativePicker({initiatives,onSelect,onManage,user,onLogout,onChangePw}){
+  const active=initiatives.filter(i=>!i.archived);
+  const archived=initiatives.filter(i=>i.archived);
   return(
-    <div>
-      <div style={{background:`${col}12`,border:`1px solid ${col}33`,borderRadius:12,padding:"1rem 1.25rem",marginBottom:"1.25rem",display:"flex",alignItems:"center",gap:12}}>
-        <div style={{width:40,height:40,borderRadius:"50%",background:col+"22",border:`2px solid ${col}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,fontWeight:700,color:col,flexShrink:0}}>{name[0]}</div>
+    <div style={{maxWidth:800,margin:"0 auto",padding:"2rem 1rem"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"2rem",flexWrap:"wrap",gap:8}}>
         <div>
-          <div style={{fontSize:15,fontWeight:500}}>{name}'s to-dos</div>
-          <div style={{fontSize:12,color:"var(--ts)"}}>{openTasks.length+openActions.length} open · {doneTasks.length+doneActions.length} done</div>
+          <h1 style={{fontSize:22,fontWeight:500,marginBottom:4}}>SE Playbook Project Planner</h1>
+          <p style={{fontSize:13,color:"var(--ts)"}}>Intact Solution Engineering · Select an initiative to continue</p>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:8,background:"var(--bs)",borderRadius:8,padding:"5px 10px",border:"0.5px solid var(--bdt)"}}>
+          <div style={{width:22,height:22,borderRadius:"50%",background:"#378ADD22",border:"1.5px solid #378ADD66",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:600,color:"#378ADD"}}>{user.username[0]}</div>
+          <span style={{fontSize:12,fontWeight:500}}>{user.username}</span>
+          <span style={{color:"var(--bds)",fontSize:12}}>|</span>
+          <button onClick={onChangePw} style={{background:"none",border:"none",fontSize:11,color:"var(--ts)",cursor:"pointer",padding:0}}>Change password</button>
+          <span style={{color:"var(--bds)",fontSize:12}}>|</span>
+          <button onClick={onLogout} style={{background:"none",border:"none",fontSize:11,color:"var(--tt)",cursor:"pointer",padding:0}}>Sign out</button>
         </div>
       </div>
-
-      <div className="g4" style={{marginBottom:"1.25rem"}}>
-        <SC label="Open tasks" val={openTasks.length} color={col}/>
-        <SC label="Open actions" val={openActions.length} color="#633806"/>
-        <SC label="Tasks done" val={doneTasks.length} color="#3B6D11"/>
-        <SC label="Actions done" val={doneActions.length} color="#3B6D11"/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:14,marginBottom:"1.5rem"}}>
+        {active.map(init=>(
+          <div key={init.id} className="initiative-card" onClick={()=>onSelect(init)}>
+            <div style={{width:36,height:36,borderRadius:8,background:init.color+"22",border:`2px solid ${init.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:12}}>{init.icon||"📋"}</div>
+            <div style={{fontSize:15,fontWeight:500,marginBottom:4}}>{init.name}</div>
+            <div style={{fontSize:12,color:"var(--ts)",lineHeight:1.5}}>{init.description||"No description"}</div>
+            <div style={{marginTop:12,display:"inline-block",fontSize:11,padding:"2px 8px",borderRadius:99,background:init.color+"18",color:init.color,fontWeight:500,border:`1px solid ${init.color}33`}}>Open →</div>
+          </div>
+        ))}
+        {user.role==="admin"&&(
+          <div className="initiative-card" onClick={onManage} style={{border:"0.5px dashed var(--bds)",background:"transparent",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:140,gap:8}}>
+            <div style={{fontSize:28,opacity:.4}}>+</div>
+            <div style={{fontSize:13,color:"var(--ts)"}}>New initiative</div>
+          </div>
+        )}
       </div>
-
-      {/* Open tasks */}
-      {openTasks.length>0&&<>
-        <div style={{fontSize:13,fontWeight:500,marginBottom:8,color:"var(--tp)"}}>Open tasks</div>
-        {openTasks.map((t,i)=>(
-          <div key={i} className="my-todo-row">
-            <div style={{paddingTop:2}}>
-              <input type="checkbox" checked={false} onChange={()=>markTask(t.si,t.ti,"Done")} style={{width:15,height:15,cursor:"pointer",accentColor:col}}/>
+      {archived.length>0&&<>
+        <div style={{fontSize:12,color:"var(--ts)",marginBottom:8}}>Archived</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
+          {archived.map(init=>(
+            <div key={init.id} className="initiative-card" onClick={()=>onSelect(init)} style={{opacity:.5}}>
+              <div style={{fontSize:13,fontWeight:500}}>{init.name}</div>
+              <div style={{fontSize:11,color:"var(--ts)"}}>Archived</div>
             </div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:13,lineHeight:1.4,marginBottom:4}}>{t.task}</div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                <SPill status={t.status} small/>
-                <span style={{fontSize:11,color:"var(--tt)"}}>§{t.sectionNum} {t.sectionTitle}</span>
-              </div>
-            </div>
-            <Sel value={t.status} options={statuses} onChange={v=>markTask(t.si,t.ti,v)} small/>
-          </div>
-        ))}
-      </>}
-
-      {/* Open actions */}
-      {openActions.length>0&&<>
-        <div style={{fontSize:13,fontWeight:500,margin:"1rem 0 8px",color:"var(--tp)"}}>Open action items</div>
-        {openActions.map(a=>(
-          <div key={a.id} className="my-todo-row" style={{border:`0.5px solid ${a.status==="Urgent"?"#F09595":"var(--bdt)"}`}}>
-            <div style={{paddingTop:2}}>
-              <input type="checkbox" checked={false} onChange={()=>markAction(a.id,"Done")} style={{width:15,height:15,cursor:"pointer",accentColor:col}}/>
-            </div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:13,lineHeight:1.4,marginBottom:4}}>{a.action}</div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                <span className="pill" style={{fontSize:11,background:(ASC_F[a.status]||"#888")+"22",color:ASC_F[a.status]||"#888"}}>{a.status}</span>
-                <span style={{fontSize:11,color:"var(--tt)"}}>Due: {a.due}</span>
-                {a.dep&&<span style={{fontSize:11,color:"#633806",background:"#FAEEDA",borderRadius:4,padding:"1px 6px"}}>◆ {a.dep}</span>}
-              </div>
-            </div>
-            <Sel value={a.status} options={action_statuses} onChange={v=>markAction(a.id,v)} small/>
-          </div>
-        ))}
-      </>}
-
-      {openTasks.length===0&&openActions.length===0&&(
-        <div className="card" style={{textAlign:"center",padding:"2rem",color:"var(--ts)"}}>
-          <div style={{fontSize:32,marginBottom:8}}>🎉</div>
-          <div style={{fontSize:14,fontWeight:500,marginBottom:4}}>All caught up!</div>
-          <div style={{fontSize:13}}>No open tasks or action items assigned to you.</div>
+          ))}
         </div>
-      )}
-
-      {/* Done (collapsed) */}
-      {(doneTasks.length+doneActions.length)>0&&<>
-        <div style={{fontSize:13,fontWeight:500,margin:"1rem 0 8px",color:"var(--ts)"}}>Completed ({doneTasks.length+doneActions.length})</div>
-        {[...doneTasks.map(t=>({label:t.task,sub:`§${t.sectionNum} ${t.sectionTitle}`,key:`t${t.si}${t.ti}`})),...doneActions.map(a=>({label:a.action,sub:`Due: ${a.due}`,key:`a${a.id}`}))].map(x=>(
-          <div key={x.key} className="my-todo-row done-row">
-            <div style={{paddingTop:2}}><input type="checkbox" checked disabled style={{width:15,height:15,accentColor:col}}/></div>
-            <div style={{flex:1}}><div style={{fontSize:13,textDecoration:"line-through",color:"var(--ts)"}}>{x.label}</div><div style={{fontSize:11,color:"var(--tt)"}}>{x.sub}</div></div>
-          </div>
-        ))}
       </>}
-    </div>
-  );
-}
-
-// --- Admin Panel ---
-function AdminPanel({cfg,setCfg}){
-  const [users,setUsers]=useState([]);
-  const [loading,setLoading]=useState(true);
-  const [newUser,setNewUser]=useState({username:"",password:"",role:"member"});
-  const [newPw,setNewPw]=useState({});
-  const [msg,setMsg]=useState({text:"",type:"ok"});
-  const [lc,setLc]=useState(cfg);
-  const [addVals,setAddVals]=useState({statuses:"",priorities:"",owners:"",action_statuses:""});
-
-  useEffect(()=>{dbGetUsers().then(u=>{setUsers(u||[]);setLoading(false);});},[]);
-  function flash(text,type="ok"){setMsg({text,type});setTimeout(()=>setMsg({text:"",type:"ok"}),3500);}
-
-  async function addUser(){
-    if(!newUser.username||!newUser.password){flash("Please fill in name and password.","err");return;}
-    await dbAddUser(newUser.username,newUser.password,newUser.role);
-    const u=await dbGetUsers();setUsers(u||[]);
-    setNewUser({username:"",password:"",role:"member"});
-    flash(`User "${newUser.username}" added.`);
-  }
-  async function delUser(u){
-    if(!confirm(`Remove user "${u}"? They will no longer be able to log in.`))return;
-    await dbDelUser(u);const us=await dbGetUsers();setUsers(us||[]);flash(`User "${u}" removed.`);
-  }
-  async function updPw(u){
-    const p=newPw[u];if(!p||p.length<1)return;
-    await dbSetPw(u,p);setNewPw(prev=>({...prev,[u]:""}));flash(`Password updated for "${u}".`);
-  }
-  async function saveCfg(){
-    await Promise.all(Object.keys(lc).map(k=>dbSetConfig(k,lc[k])));
-    setCfg(lc);flash("Configuration saved and applied to all users.");
-  }
-  function addToList(key){
-    const v=addVals[key].trim();if(!v)return;
-    setLc(c=>({...c,[key]:[...c[key],v]}));
-    setAddVals(p=>({...p,[key]:""}));
-  }
-  function rmFromList(key,i){setLc(c=>({...c,[key]:c[key].filter((_,j)=>j!==i)}));}
-
-  return(
-    <div>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <div style={{background:"#FAEEDA",border:"1px solid #EF9F27",borderRadius:8,padding:"8px 12px",marginBottom:"1.25rem",fontSize:12,color:"#633806"}}>🔒 Admin panel — visible only to admins.</div>
-      {msg.text&&<div className={msg.type==="err"?"err-msg":"ok-msg"}>{msg.text}</div>}
-
-      <div className="admin-section">
-        <h3>Team members</h3>
-        {loading?<Spinner size={24}/>:users.map(u=>(
-          <div key={u.username} className="user-row">
-            <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:120}}>
-              <div style={{width:28,height:28,borderRadius:"50%",background:oc(u.username,[])+"22",border:`1.5px solid ${oc(u.username,[])}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,color:oc(u.username,[])}}>{u.username[0]}</div>
-              <span style={{fontSize:13,fontWeight:500}}>{u.username}</span>
-              <span className="pill" style={{fontSize:10,background:u.role==="admin"?"#FAEEDA":"#F1EFE8",color:u.role==="admin"?"#633806":"#5F5E5A"}}>{u.role}</span>
-            </div>
-            <input type="password" value={newPw[u.username]||""} onChange={e=>setNewPw(p=>({...p,[u.username]:e.target.value}))} placeholder="New password" style={{width:140,fontSize:12}}/>
-            <button className="btn-p" style={{fontSize:11,padding:"4px 10px"}} onClick={()=>updPw(u.username)}>Update</button>
-            {u.role!=="admin"&&<button className="btn-d" onClick={()=>delUser(u.username)}>Remove</button>}
-          </div>
-        ))}
-        <div style={{marginTop:14,padding:12,background:"var(--bs)",borderRadius:8}}>
-          <div style={{fontSize:12,fontWeight:500,marginBottom:8}}>Add new user</div>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            <input value={newUser.username} onChange={e=>setNewUser(p=>({...p,username:e.target.value}))} placeholder="Name" style={{flex:1,minWidth:100,fontSize:12}}/>
-            <input type="password" value={newUser.password} onChange={e=>setNewUser(p=>({...p,password:e.target.value}))} placeholder="Password" style={{flex:1,minWidth:100,fontSize:12}}/>
-            <Sel value={newUser.role} options={["member","admin"]} onChange={v=>setNewUser(p=>({...p,role:v}))} small/>
-            <button className="btn-p" style={{fontSize:12,padding:"5px 14px"}} onClick={addUser}>Add</button>
-          </div>
-        </div>
-      </div>
-
-      <div className="admin-section">
-        <h3>Configuration</h3>
-        {[{key:"statuses",label:"Section statuses"},{key:"priorities",label:"Priority levels"},{key:"owners",label:"Owner options"},{key:"action_statuses",label:"Action item statuses"}].map(({key,label})=>(
-          <div key={key} style={{marginBottom:16}}>
-            <div style={{fontSize:12,color:"var(--ts)",marginBottom:6}}>{label}</div>
-            <div className="tag-row" style={{marginBottom:6}}>
-              {lc[key].map((v,i)=>(
-                <div key={i} className="tag-item"><span>{v}</span><button onClick={()=>rmFromList(key,i)} style={{background:"none",border:"none",color:"#A32D2D",fontSize:14,lineHeight:1,padding:0}}>×</button></div>
-              ))}
-            </div>
-            <div style={{display:"flex",gap:6}}>
-              <input value={addVals[key]} onChange={e=>setAddVals(p=>({...p,[key]:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&addToList(key)} placeholder={`Add new ${label.toLowerCase()}…`} style={{fontSize:12,flex:1}}/>
-              <button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>addToList(key)}>Add</button>
-            </div>
-          </div>
-        ))}
-        <button className="btn-p" onClick={saveCfg}>Save configuration</button>
-      </div>
     </div>
   );
 }
 
 // --- Sprint Import Modal ---
-const AI_SYS=`You are a project management assistant for the Intact SE Playbook initiative. You receive the current JSON state of a project planner and a sprint review transcript. Your job is to identify what changed, what was completed, and what new commitments were made.
-
-Return ONLY a single valid JSON object. No markdown, no code fences, no explanation before or after. Start your response with { and end with }.
-
-The JSON must have this exact shape:
-{
-  "summary": "string — 2-3 sentences describing what happened this sprint",
-  "sectionUpdates": [
-    {
-      "num": "section number as string, use '11-13' for that range",
-      "changes": {
-        "status": "new status string — only if changed",
-        "flag": "new flag text — only if changed; use empty string to clear a flag",
-        "notes": "text to append to notes — only if genuinely new context",
-        "tasksToAdd": [{"task": "task text", "status": "Not Started"}],
-        "tasksToComplete": ["exact task text to mark Done"],
-        "tasksToUpdate": [{"task": "exact existing task text", "newStatus": "new status"}]
-      }
-    }
-  ],
-  "actionsToComplete": [1, 2, 3],
-  "actionsToAdd": [
-    {"owner": "David", "action": "action description", "due": "due date", "dep": "dependency or empty string", "status": "Committed", "type": "action"}
-  ],
-  "questionsToResolve": [17, 18],
-  "questionsToAdd": [
-    {"owner": "David", "action": "question text", "due": "TBD", "dep": "", "status": "Decision Needed", "type": "question"}
-  ]
-}
-
-Rules:
-- Valid owner values: David, Steven, Stefan, Tom, David + Steven, David + Tom, Steven + Tom, Steven + Stefan, All
-- Valid section statuses: Not Started, Collecting, In Progress, In Cleanup, Done, Blocked
-- Only include sectionUpdates entries where something actually changed
-- Only include fields inside "changes" that actually changed — omit unchanged fields entirely
-- Only mark actions/tasks as complete if the transcript explicitly confirms they are done
-- If nothing changed in a category, use an empty array []
-- The actionsToComplete and questionsToResolve arrays contain integer IDs only
-- Be conservative — when in doubt, do not mark something as done`;
+const AI_SYS=`You are a project management assistant. You receive the current JSON state of a project initiative and a sprint review transcript. Return ONLY a single valid JSON object starting with { and ending with }. No markdown, no explanation.
+{"summary":"2-3 sentence summary","sectionUpdates":[{"num":"<num as string>","changes":{"status":"<if changed>","flag":"<if changed, empty to clear>","notes":"<if new context>","tasksToAdd":[{"task":"<text>","status":"Not Started"}],"tasksToComplete":["<exact task text>"],"tasksToUpdate":[{"task":"<exact text>","newStatus":"<status>"}]}}],"actionsToComplete":[<ids>],"actionsToAdd":[{"owner":"<n>","action":"<text>","due":"<date>","dep":"","status":"Committed","type":"action"}],"questionsToResolve":[<ids>],"questionsToAdd":[{"owner":"<n>","action":"<question>","due":"TBD","dep":"","status":"Decision Needed","type":"question"}]}
+Rules: only include changed fields; only mark Done if explicitly stated; conservative approach.`;
 
 function SprintModal({sections,actions,owners,onApply,onClose}){
-  const [text,setText]=useState("");
-  const [stage,setStage]=useState("input");
-  const [diff,setDiff]=useState(null);
-  const [err,setErr]=useState("");
+  const [text,setText]=useState("");const [stage,setStage]=useState("input");const [diff,setDiff]=useState(null);const [err,setErr]=useState("");
   async function analyse(){
     if(!text.trim()){setErr("Please paste the transcript first.");return;}
     setErr("");setStage("thinking");
-    const state=JSON.stringify({
-      sections:sections.map(s=>({num:s.num,title:s.title,owner:s.owner,status:s.status,flag:s.flag,tasks:s.tasks})),
-      actions:actions.map(a=>({id:a.id,owner:a.owner,action:a.action,due:a.due,status:a.status,type:a.type}))
-    });
+    const state=JSON.stringify({sections:sections.map(s=>({num:s.num,title:s.title,owner:s.owner,status:s.status,flag:s.flag,tasks:s.tasks})),actions:actions.map(a=>({id:a.id,owner:a.owner,action:a.action,due:a.due,status:a.status,type:a.type}))});
     try{
-      const res=await fetch("/api/analyse",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"claude-sonnet-4-20250514",
-          max_tokens:4000,
-          system:AI_SYS,
-          messages:[{role:"user",content:`CURRENT PROJECT STATE (JSON):\n${state}\n\nSPRINT REVIEW TRANSCRIPT:\n${text}\n\nAnalyse the transcript against the current state and return ONLY the JSON diff object as instructed. No preamble, no explanation, no markdown fences.`}]
-        })
-      });
-      if(!res.ok){
-        const errBody=await res.text();
-        console.error("API error:",res.status,errBody);
-        setErr(`API error ${res.status} — ${res.status===401?"check API key":res.status===429?"rate limited, try again in a moment":"see console for details"}`);
-        setStage("input");return;
-      }
+      const res=await fetch("/api/analyse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4000,system:AI_SYS,messages:[{role:"user",content:`CURRENT STATE:\n${state}\n\nSPRINT TRANSCRIPT:\n${text}\n\nReturn ONLY the JSON object.`}]})});
+      if(!res.ok){const e=await res.json();setErr(e.error||`Error ${res.status}`);setStage("input");return;}
       const data=await res.json();
       const raw=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
-      if(!raw){setErr("No response from AI. Please try again.");setStage("input");return;}
       const clean=raw.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/```\s*$/,"").trim();
-      let parsed;
-      try{parsed=JSON.parse(clean);}
-      catch(pe){
-        console.error("JSON parse error:",pe,"Raw:",raw);
-        setErr("AI returned an unexpected format. Please try again.");
-        setStage("input");return;
-      }
+      const parsed=JSON.parse(clean);
       setDiff(parsed);setStage("review");
-    }catch(e){
-      console.error("Fetch error:",e);
-      setErr("Network error — please check your connection and try again.");
-      setStage("input");
-    }
+    }catch(e){setErr("Failed to analyse transcript. Please try again.");setStage("input");}
   }
   function apply(){
     setStage("applying");
     let ns=[...sections],na=[...actions];
-    (diff.sectionUpdates||[]).forEach(u=>{
-      const idx=ns.findIndex(s=>String(s.num)===String(u.num));if(idx===-1)return;
-      const s={...ns[idx]},c=u.changes||{};
-      if(c.status!==undefined)s.status=c.status;if(c.flag!==undefined)s.flag=c.flag;
-      if(c.notes!==undefined)s.notes=s.notes+(s.notes?"\n\n":"")+c.notes;
-      if(c.tasksToAdd?.length)s.tasks=[...s.tasks,...c.tasksToAdd];
-      if(c.tasksToComplete?.length)s.tasks=s.tasks.map(t=>c.tasksToComplete.includes(t.task)?{...t,status:"Done"}:t);
-      if(c.tasksToUpdate?.length)s.tasks=s.tasks.map(t=>{const u2=c.tasksToUpdate.find(x=>x.task===t.task);return u2?{...t,status:u2.newStatus}:t;});
-      ns[idx]=s;
-    });
+    (diff.sectionUpdates||[]).forEach(u=>{const idx=ns.findIndex(s=>String(s.num)===String(u.num));if(idx===-1)return;const s={...ns[idx]},c=u.changes||{};if(c.status!==undefined)s.status=c.status;if(c.flag!==undefined)s.flag=c.flag;if(c.notes!==undefined)s.notes=s.notes+(s.notes?"\n\n":"")+c.notes;if(c.tasksToAdd?.length)s.tasks=[...s.tasks,...c.tasksToAdd];if(c.tasksToComplete?.length)s.tasks=s.tasks.map(t=>c.tasksToComplete.includes(t.task)?{...t,status:"Done"}:t);if(c.tasksToUpdate?.length)s.tasks=s.tasks.map(t=>{const u2=c.tasksToUpdate.find(x=>x.task===t.task);return u2?{...t,status:u2.newStatus}:t;});ns[idx]=s;});
     (diff.actionsToComplete||[]).forEach(id=>{na=na.map(a=>a.id===id?{...a,status:"Done"}:a);});
-    const mid=Math.max(0,...na.map(a=>a.id));
-    (diff.actionsToAdd||[]).forEach((a,i)=>na.push({...a,id:mid+i+1}));
+    const mid=Math.max(0,...na.map(a=>a.id));(diff.actionsToAdd||[]).forEach((a,i)=>na.push({...a,id:mid+i+1}));
     (diff.questionsToResolve||[]).forEach(id=>{na=na.map(a=>a.id===id?{...a,status:"Done"}:a);});
-    const mid2=Math.max(0,...na.map(a=>a.id));
-    (diff.questionsToAdd||[]).forEach((q,i)=>na.push({...q,id:mid2+i+1}));
+    const mid2=Math.max(0,...na.map(a=>a.id));(diff.questionsToAdd||[]).forEach((q,i)=>na.push({...q,id:mid2+i+1}));
     onApply(ns,na);onClose();
   }
   const cc=(diff?.sectionUpdates||[]).reduce((s,u)=>{const c=u.changes||{};return s+(c.status?1:0)+(c.flag!==undefined?1:0)+(c.notes?1:0)+(c.tasksToAdd?.length||0)+(c.tasksToComplete?.length||0)+(c.tasksToUpdate?.length||0);},(diff?.actionsToComplete?.length||0)+(diff?.actionsToAdd?.length||0)+(diff?.questionsToResolve?.length||0)+(diff?.questionsToAdd?.length||0));
   return(
     <div className="modal-bg" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal">
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
-          <h2>📋 Update from sprint review</h2>
-          <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,color:"var(--tt)",lineHeight:1}}>×</button>
-        </div>
-        {stage==="input"&&<>
-          <p>Paste your sprint review transcript. Claude will analyse it and show a preview before applying any changes.</p>
-          <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="Paste transcript here…" style={{width:"100%",height:200,marginBottom:10,fontSize:12,padding:"8px 10px",borderRadius:8,border:"0.5px solid var(--bds)"}}/>
-          {err&&<div className="err-msg">{err}</div>}
-          <div className="btn-row"><button className="btn-s" onClick={onClose}>Cancel</button><button className="btn-p" onClick={analyse} disabled={!text.trim()}>Analyse →</button></div>
-        </>}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}><h2>📋 Update from sprint review</h2><button onClick={onClose} style={{background:"none",border:"none",fontSize:20,color:"var(--tt)",lineHeight:1}}>×</button></div>
+        {stage==="input"&&<><p>Paste your sprint review transcript. Claude will analyse it and show a preview before applying changes.</p><textarea value={text} onChange={e=>setText(e.target.value)} placeholder="Paste transcript here…" style={{width:"100%",height:200,marginBottom:10,fontSize:12,padding:"8px 10px",borderRadius:8,border:"0.5px solid var(--bds)"}}/>{err&&<div className="err-msg">{err}</div>}<div className="btn-row"><button className="btn-s" onClick={onClose}>Cancel</button><button className="btn-p" onClick={analyse} disabled={!text.trim()}>Analyse →</button></div></>}
         {stage==="thinking"&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14,padding:"2rem 0"}}><Spinner/><div style={{fontSize:13,color:"var(--ts)"}}>Analysing transcript…</div></div>}
         {stage==="review"&&diff&&<>
           <p style={{marginBottom:8}}><strong>Summary:</strong> {diff.summary}</p>
@@ -686,7 +368,7 @@ function SprintModal({sections,actions,owners,onApply,onClose}){
           <div className="changes-list">
             {(diff.sectionUpdates||[]).flatMap((u,i)=>{const s=sections.find(x=>String(x.num)===String(u.num));const c=u.changes||{};const items=[];if(c.status)items.push(`Status → ${c.status}`);if(c.flag!==undefined)items.push(c.flag?`Flag: ${c.flag}`:"Flag cleared");if(c.notes)items.push("Notes updated");(c.tasksToAdd||[]).forEach(t=>items.push(`New task: ${t.task}`));(c.tasksToComplete||[]).forEach(t=>items.push(`Completed: ${t}`));(c.tasksToUpdate||[]).forEach(t=>items.push(`${t.task} → ${t.newStatus}`));return items.map((item,j)=><div key={`s${i}${j}`} className="change-item"><span className="change-tag" style={{background:"#E6F1FB",color:"#185FA5"}}>§{u.num}</span><span>{s?.title} — {item}</span></div>);})}
             {(diff.actionsToComplete||[]).map(id=>{const a=actions.find(x=>x.id===id);return <div key={`ac${id}`} className="change-item"><span className="change-tag" style={{background:"#EAF3DE",color:"#3B6D11"}}>Done</span><span>{a?.action||`Action #${id}`}</span></div>;})}
-            {(diff.actionsToAdd||[]).map((a,i)=><div key={`aa${i}`} className="change-item"><span className="change-tag" style={{background:"#FAEEDA",color:"#633806"}}>New</span><span>{a.owner} — {a.action} (due: {a.due})</span></div>)}
+            {(diff.actionsToAdd||[]).map((a,i)=><div key={`aa${i}`} className="change-item"><span className="change-tag" style={{background:"#FAEEDA",color:"#633806"}}>New</span><span>{a.owner} — {a.action}</span></div>)}
             {(diff.questionsToResolve||[]).map(id=>{const q=actions.find(x=>x.id===id);return <div key={`qr${id}`} className="change-item"><span className="change-tag" style={{background:"#EAF3DE",color:"#3B6D11"}}>Resolved</span><span>{q?.action||`Q #${id}`}</span></div>;})}
             {(diff.questionsToAdd||[]).map((q,i)=><div key={`qa${i}`} className="change-item"><span className="change-tag" style={{background:"#EEEDFE",color:"#3C3489"}}>New Q</span><span>{q.action}</span></div>)}
             {cc===0&&<div className="change-item"><span style={{color:"var(--ts)",fontSize:13}}>No changes detected.</span></div>}
@@ -702,253 +384,405 @@ function SprintModal({sections,actions,owners,onApply,onClose}){
 // --- Dashboard ---
 function Dashboard({sections,actions,cfg}){
   const {owners}=cfg;
-  const total=sections.length,done=sections.filter(s=>s.status==="Done").length;
-  const actv=sections.filter(s=>["In Progress","In Cleanup","Collecting"].includes(s.status)).length;
-  const blkd=sections.filter(s=>s.status==="Blocked").length,ns=sections.filter(s=>s.status==="Not Started").length;
+  const total=sections.length,done=sections.filter(s=>s.status==="Done").length,actv=sections.filter(s=>["In Progress","In Cleanup","Collecting"].includes(s.status)).length,blkd=sections.filter(s=>s.status==="Blocked").length,ns=sections.filter(s=>s.status==="Not Started").length;
   const pct=Math.round((done/total)*100);
   const allT=sections.flatMap(s=>s.tasks.map(t=>({...t,section:s.title,sn:s.num,prio:s.prio})));
   const actT=allT.filter(t=>["In Progress","In Cleanup"].includes(t.status));
-  const openA=actions.filter(a=>a.type==="action"&&a.status!=="Done");
-  const openQ=actions.filter(a=>a.type==="question"&&a.status!=="Done");
-  const flags=sections.filter(s=>s.flag);
+  const openA=actions.filter(a=>a.type==="action"&&a.status!=="Done"),openQ=actions.filter(a=>a.type==="question"&&a.status!=="Done"),flags=sections.filter(s=>s.flag);
   const bc=pct>=70?"#1D9E75":pct>=40?"#378ADD":"#BA7517";
-  const om={};
-  sections.forEach(s=>s.owner.split("+").map(o=>o.trim()).forEach(o=>{if(!om[o])om[o]={total:0,done:0,actv:0};om[o].total++;if(s.status==="Done")om[o].done++;if(["In Progress","In Cleanup","Collecting"].includes(s.status))om[o].actv++;}));
-  return(
-    <div>
-      <div className="card-s" style={{marginBottom:"1rem",padding:"1.25rem 1.5rem"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:10,flexWrap:"wrap",gap:8}}>
-          <div><div style={{fontSize:13,color:"var(--ts)",marginBottom:2}}>Overall playbook completion</div><div style={{fontSize:32,fontWeight:500}}>{pct}%</div></div>
-          <div style={{fontSize:12,color:"var(--ts)"}}>{done} of {total} sections complete</div>
-        </div>
-        <div style={{height:10,background:"var(--bp)",borderRadius:99,overflow:"hidden",border:"0.5px solid var(--bdt)"}}>
-          <div style={{height:"100%",width:`${pct}%`,background:bc,borderRadius:99}}/>
-        </div>
-        <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
-          {[["Done",done,"#EAF3DE","#3B6D11"],["Active",actv,"#E6F1FB","#185FA5"],["Not Started",ns,"#F1EFE8","#5F5E5A"],["Blocked",blkd,"#FCEBEB","#A32D2D"]].map(([l,v,bg,c])=>(
-            <span key={l} className="pill" style={{fontSize:11,padding:"3px 10px",background:bg,color:c}}>{l}: {v}</span>
-          ))}
-        </div>
-      </div>
-      <div className="g4"><SC label="Total tasks" val={allT.length}/><SC label="Active tasks" val={actT.length} color="#185FA5"/><SC label="Open actions" val={openA.length} color="#633806"/><SC label="Open questions" val={openQ.length} color="#3C3489"/></div>
-      <div className="two-col">
-        <div className="card">
-          <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>Active tasks</div>
-          {actT.length===0&&<div style={{fontSize:12,color:"var(--tt)"}}>No active tasks.</div>}
-          {actT.map((t,i)=>(<div key={i} style={{borderBottom:"0.5px solid var(--bdt)",paddingBottom:8,marginBottom:8}}><div style={{display:"flex",gap:6,marginBottom:3,flexWrap:"wrap"}}><SPill status={t.status} small/><Pill label={t.prio} bg={PS_F[t.prio]?.bg} text={PS_F[t.prio]?.text}/></div><div style={{fontSize:12,lineHeight:1.4,marginBottom:2}}>{t.task}</div><div style={{fontSize:11,color:"var(--tt)"}}>§{t.sn} {t.section}</div></div>))}
-        </div>
-        <div className="card">
-          <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>Open actions</div>
-          {openA.length===0&&<div style={{fontSize:12,color:"var(--tt)"}}>All actions complete!</div>}
-          {openA.slice(0,7).map((a,i)=>(<div key={i} style={{borderBottom:"0.5px solid var(--bdt)",paddingBottom:8,marginBottom:8}}><div style={{display:"flex",gap:6,marginBottom:3,flexWrap:"wrap"}}><span className="pill" style={{fontSize:11,background:(ASC_F[a.status]||"#888")+"22",color:ASC_F[a.status]||"#888"}}>{a.status}</span><span style={{fontSize:11,color:"var(--tt)"}}>{a.due}</span></div><div style={{fontSize:12,lineHeight:1.4,marginBottom:4}}>{a.action}</div><OTag owner={a.owner} owners={owners}/></div>))}
-          {openA.length>7&&<div style={{fontSize:11,color:"var(--ts)"}}>+{openA.length-7} more in Action Items tab</div>}
-        </div>
-      </div>
-      <div className="card" style={{marginBottom:"1rem"}}>
-        <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>Owner workload</div>
-        <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(owners.length,4)},1fr)`,gap:10}}>
-          {owners.map(name=>{
-            const d=om[name]||{total:0,done:0,actv:0};const p=d.total>0?Math.round((d.done/d.total)*100):0;const c=oc(name,owners);
-            const myA=actions.filter(a=>a.owner.includes(name)&&a.type==="action"&&a.status!=="Done");
-            return(<div key={name} className="card-s" style={{padding:".75rem"}}><div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><div style={{width:24,height:24,borderRadius:"50%",background:c+"22",border:`1.5px solid ${c}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:600,color:c}}>{name[0]}</div><span style={{fontSize:13,fontWeight:500}}>{name}</span></div><div style={{fontSize:11,color:"var(--ts)",marginBottom:6}}>{d.total} sections · {d.actv} active · {myA.length} actions</div><div style={{height:5,background:"var(--bp)",borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:c,borderRadius:99}}/></div><div style={{fontSize:11,color:"var(--tt)",marginTop:3}}>{p}% complete</div></div>);
-          })}
-        </div>
-      </div>
-      {flags.length>0&&<div className="card"><div style={{fontSize:13,fontWeight:500,marginBottom:8}}>Active flags & blockers</div>{flags.map((s,i)=><FlagB key={i} text={`§${s.num} ${s.title}: ${s.flag}`}/>)}</div>}
+  const om={};sections.forEach(s=>s.owner.split("+").map(o=>o.trim()).forEach(o=>{if(!om[o])om[o]={total:0,done:0,actv:0};om[o].total++;if(s.status==="Done")om[o].done++;if(["In Progress","In Cleanup","Collecting"].includes(s.status))om[o].actv++;}));
+  return(<div>
+    <div className="card-s" style={{marginBottom:"1rem",padding:"1.25rem 1.5rem"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:10,flexWrap:"wrap",gap:8}}><div><div style={{fontSize:13,color:"var(--ts)",marginBottom:2}}>Overall completion</div><div style={{fontSize:32,fontWeight:500}}>{pct}%</div></div><div style={{fontSize:12,color:"var(--ts)"}}>{done} of {total} sections complete</div></div>
+      <div style={{height:10,background:"var(--bp)",borderRadius:99,overflow:"hidden",border:"0.5px solid var(--bdt)"}}><div style={{height:"100%",width:`${pct}%`,background:bc,borderRadius:99}}/></div>
+      <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>{[["Done",done,"#EAF3DE","#3B6D11"],["Active",actv,"#E6F1FB","#185FA5"],["Not Started",ns,"#F1EFE8","#5F5E5A"],["Blocked",blkd,"#FCEBEB","#A32D2D"]].map(([l,v,bg,c])=><span key={l} className="pill" style={{fontSize:11,padding:"3px 10px",background:bg,color:c}}>{l}: {v}</span>)}</div>
     </div>
-  );
-}
+    <div className="g4"><SC label="Total tasks" val={allT.length}/><SC label="Active tasks" val={actT.length} color="#185FA5"/><SC label="Open actions" val={openA.length} color="#633806"/><SC label="Open questions" val={openQ.length} color="#3C3489"/></div>
+    <div className="two-col">
+      <div className="card"><div style={{fontSize:13,fontWeight:500,marginBottom:10}}>Active tasks</div>{actT.length===0&&<div style={{fontSize:12,color:"var(--tt)"}}>No active tasks.</div>}{actT.map((t,i)=>(<div key={i} style={{borderBottom:"0.5px solid var(--bdt)",paddingBottom:8,marginBottom:8}}><div style={{display:"flex",gap:6,marginBottom:3,flexWrap:"wrap"}}><SPill status={t.status} small/><Pill label={t.prio} bg={PS_F[t.prio]?.bg} text={PS_F[t.prio]?.text}/></div><div style={{fontSize:12,lineHeight:1.4,marginBottom:2}}>{t.task}</div><div style={{fontSize:11,color:"var(--tt)"}}>§{t.sn} {t.section}</div></div>))}</div>
+      <div className="card"><div style={{fontSize:13,fontWeight:500,marginBottom:10}}>Open actions</div>{openA.length===0&&<div style={{fontSize:12,color:"var(--tt)"}}>All actions complete!</div>}{openA.slice(0,7).map((a,i)=>(<div key={i} style={{borderBottom:"0.5px solid var(--bdt)",paddingBottom:8,marginBottom:8}}><div style={{display:"flex",gap:6,marginBottom:3,flexWrap:"wrap"}}><span className="pill" style={{fontSize:11,background:(ASC_F[a.status]||"#888")+"22",color:ASC_F[a.status]||"#888"}}>{a.status}</span><span style={{fontSize:11,color:"var(--tt)"}}>{a.due}</span></div><div style={{fontSize:12,lineHeight:1.4,marginBottom:4}}>{a.action}</div><OTag owner={a.owner} owners={owners}/></div>))}{openA.length>7&&<div style={{fontSize:11,color:"var(--ts)"}}>+{openA.length-7} more in Action Items tab</div>}</div>
+    </div>
+    <div className="card" style={{marginBottom:"1rem"}}>
+      <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>Owner workload</div>
+      <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(owners.length,4)},1fr)`,gap:10}}>
+        {owners.map(name=>{const d=om[name]||{total:0,done:0,actv:0};const p=d.total>0?Math.round((d.done/d.total)*100):0;const c=oc(name,owners);const myA=actions.filter(a=>a.owner.includes(name)&&a.type==="action"&&a.status!=="Done");return(<div key={name} className="card-s" style={{padding:".75rem"}}><div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><div style={{width:24,height:24,borderRadius:"50%",background:c+"22",border:`1.5px solid ${c}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:600,color:c}}>{name[0]}</div><span style={{fontSize:13,fontWeight:500}}>{name}</span></div><div style={{fontSize:11,color:"var(--ts)",marginBottom:6}}>{d.total} sections · {d.actv} active · {myA.length} actions</div><div style={{height:5,background:"var(--bp)",borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:c,borderRadius:99}}/></div><div style={{fontSize:11,color:"var(--tt)",marginTop:3}}>{p}% complete</div></div>);})}
+      </div>
+    </div>
+    {flags.length>0&&<div className="card"><div style={{fontSize:13,fontWeight:500,marginBottom:8}}>Active flags & blockers</div>{flags.map((s,i)=><FlagB key={i} text={`§${s.num} ${s.title}: ${s.flag}`}/>)}</div>}
+  </div>);}
 
 // --- Kanban ---
 function Kanban({sections,setSections,cfg}){
-  const {statuses,owners}=cfg;
-  const di=useRef(null);
+  const {statuses,owners}=cfg;const di=useRef(null);
   const cols=["Not Started","In Progress","In Cleanup","Done","Blocked"];
   const onDS=(e,i)=>{di.current=i;e.dataTransfer.effectAllowed="move";};
   const onDrop=(e,col)=>{e.preventDefault();if(di.current===null)return;const n=[...sections];n[di.current]={...n[di.current],status:col};setSections(n);di.current=null;};
   const onDO=e=>e.preventDefault();
-  return(
-    <div>
-      <div style={{fontSize:12,color:"var(--ts)",marginBottom:12}}>Drag cards between columns or use the dropdown. Changes sync automatically.</div>
-      <div className="kb-board">
-        {cols.map(col=>{
-          const cs=SS_F[col]||{bg:"#F1EFE8",text:"#5F5E5A",border:"#B4B2A9"};const colS=sections.filter(s=>s.status===col);
-          return(<div key={col} className="kb-col" style={{background:"var(--bs)"}} onDragOver={onDO} onDrop={e=>onDrop(e,col)}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><span style={{fontSize:12,fontWeight:500,color:cs.text}}>{col}</span><span className="pill" style={{fontSize:11,background:cs.bg,color:cs.text,border:`1px solid ${cs.border}`}}>{colS.length}</span></div>
-            {colS.map(s=>{const gi=sections.findIndex(x=>x.num===s.num);const td=s.tasks.filter(t=>t.status==="Done").length,tp=s.tasks.length>0?Math.round((td/s.tasks.length)*100):0;const occ=oc(s.owner.split(/[+ ]/)[0],owners);
-              return(<div key={String(s.num)} className="kb-card" style={{background:"var(--bp)"}} draggable onDragStart={e=>onDS(e,gi)}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:5,gap:4}}><span style={{fontSize:11,fontWeight:500,lineHeight:1.3}}>§{s.num} {s.title}</span><Pill label={s.prio} bg={PS_F[s.prio]?.bg} text={PS_F[s.prio]?.text}/></div><OTag owner={s.owner} owners={owners}/>{s.flag&&<div style={{fontSize:10,color:"#A32D2D",background:"#FCEBEB",borderRadius:4,padding:"2px 6px",marginTop:5}}>⚑ Flagged</div>}<div style={{marginTop:6,fontSize:10,color:"var(--tt)",marginBottom:3}}>{td}/{s.tasks.length} tasks done</div><div style={{height:3,background:"var(--bs)",borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",width:`${tp}%`,background:occ,borderRadius:99}}/></div><div style={{marginTop:6}}><Sel value={s.status} options={statuses} onChange={v=>{const n=[...sections];n[gi]={...n[gi],status:v};setSections(n);}} small/></div></div>);
-            })}
-            {colS.length===0&&<div style={{fontSize:11,color:"var(--tt)",textAlign:"center",padding:"1rem 0",opacity:.4}}>Drop here</div>}
-          </div>);
-        })}
-      </div>
+  return(<div>
+    <div style={{fontSize:12,color:"var(--ts)",marginBottom:12}}>Drag cards between columns or use the dropdown. Changes sync automatically.</div>
+    <div className="kb-board">
+      {cols.map(col=>{const cs=SS_F[col]||{bg:"#F1EFE8",text:"#5F5E5A",border:"#B4B2A9"};const colS=sections.filter(s=>s.status===col);return(
+        <div key={col} className="kb-col" style={{background:"var(--bs)"}} onDragOver={onDO} onDrop={e=>onDrop(e,col)}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><span style={{fontSize:12,fontWeight:500,color:cs.text}}>{col}</span><span className="pill" style={{fontSize:11,background:cs.bg,color:cs.text,border:`1px solid ${cs.border}`}}>{colS.length}</span></div>
+          {colS.map(s=>{const gi=sections.findIndex(x=>x.num===s.num);const td=s.tasks.filter(t=>t.status==="Done").length,tp=s.tasks.length>0?Math.round((td/s.tasks.length)*100):0;const occ=oc(s.owner.split(/[+ ]/)[0],owners);return(
+            <div key={String(s.num)} className="kb-card" style={{background:"var(--bp)"}} draggable onDragStart={e=>onDS(e,gi)}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:5,gap:4}}><span style={{fontSize:11,fontWeight:500,lineHeight:1.3}}>§{s.num} {s.title}</span><Pill label={s.prio} bg={PS_F[s.prio]?.bg} text={PS_F[s.prio]?.text}/></div>
+              <OTag owner={s.owner} owners={owners}/>
+              {s.flag&&<div style={{fontSize:10,color:"#A32D2D",background:"#FCEBEB",borderRadius:4,padding:"2px 6px",marginTop:5}}>⚑ Flagged</div>}
+              <div style={{marginTop:6,fontSize:10,color:"var(--tt)",marginBottom:3}}>{td}/{s.tasks.length} tasks done</div>
+              <div style={{height:3,background:"var(--bs)",borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",width:`${tp}%`,background:occ,borderRadius:99}}/></div>
+              <div style={{marginTop:6}}><Sel value={s.status} options={statuses} onChange={v=>{const n=[...sections];n[gi]={...n[gi],status:v};setSections(n);}} small/></div>
+            </div>
+          );})}
+          {colS.length===0&&<div style={{fontSize:11,color:"var(--tt)",textAlign:"center",padding:"1rem 0",opacity:.4}}>Drop here</div>}
+        </div>
+      );})}
     </div>
-  );
-}
+  </div>);}
 
 // --- Project Plan ---
 function ProjectPlan({sections,setSections,cfg}){
-  const {statuses,priorities,owners}=cfg;
-  const [open,setOpen]=useState(null);
+  const {statuses,priorities,owners}=cfg;const [open,setOpen]=useState(null);
   const upd=(i,f,v)=>{const n=[...sections];n[i]={...n[i],[f]:v};setSections(n);};
   const updT=(si,ti,f,v)=>{const n=[...sections];const t=[...n[si].tasks];t[ti]={...t[ti],[f]:v};n[si]={...n[si],tasks:t};setSections(n);};
   const addT=si=>{const n=[...sections];n[si].tasks=[...n[si].tasks,{task:"New task",status:"Not Started"}];setSections(n);};
   const rmT=(si,ti)=>{const n=[...sections];n[si].tasks=n[si].tasks.filter((_,j)=>j!==ti);setSections(n);};
   const ownerOpts=[...owners,...owners.flatMap((a,i)=>owners.slice(i+1).map(b=>`${a} + ${b}`)),"All"];
-  return(
-    <div>
-      <div className="g4"><SC label="Sections" val={sections.length}/><SC label="Prio 1" val={sections.filter(s=>s.prio==="P1").length} color="#A32D2D"/><SC label="Active" val={sections.filter(s=>["In Progress","In Cleanup","Collecting"].includes(s.status)).length} color="#185FA5"/><SC label="Done" val={sections.filter(s=>s.status==="Done").length} color="#3B6D11"/></div>
-      {sections.map((s,si)=>(
-        <div key={si} className="sec-row">
-          <div className="sec-hdr">
-            <span style={{fontSize:12,color:"var(--tt)",minWidth:20}}>{s.num}</span>
-            <span style={{fontSize:13,fontWeight:500,flex:1}}>{s.title}</span>
-            <OTag owner={s.owner} owners={owners}/>
-            <Sel value={s.prio} options={priorities} onChange={v=>upd(si,"prio",v)} small/>
-            <Sel value={s.status} options={statuses} onChange={v=>upd(si,"status",v)} small/>
-            <button onClick={()=>setOpen(open===si?null:si)} style={{fontSize:12,background:"none",border:"none",color:"var(--tt)",padding:0}}>{open===si?"▲":"▼"}</button>
-          </div>
-          {open===si&&(
-            <div style={{padding:"0 1rem 1rem",borderTop:"0.5px solid var(--bdt)"}}>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:10,marginBottom:10}}>
-                <div><div style={{fontSize:11,color:"var(--ts)",marginBottom:4}}>Owner</div><Sel value={s.owner} options={ownerOpts} onChange={v=>upd(si,"owner",v)}/></div>
-                <div><div style={{fontSize:11,color:"var(--ts)",marginBottom:4}}>Flag / blocker</div><Txt value={s.flag} onChange={v=>upd(si,"flag",v)}/></div>
-              </div>
-              {s.flag&&<FlagB text={s.flag}/>}
-              <div style={{fontSize:11,color:"var(--ts)",marginBottom:6}}>Tasks</div>
-              {s.tasks.map((t,ti)=>(<div key={ti} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><Sel value={t.status} options={statuses} onChange={v=>updT(si,ti,"status",v)} small/><Txt value={t.task} onChange={v=>updT(si,ti,"task",v)} sty={{fontSize:12}}/><button onClick={()=>rmT(si,ti)} style={{fontSize:14,color:"#A32D2D",background:"none",border:"none",padding:"0 4px",flexShrink:0}}>×</button></div>))}
-              <button style={{fontSize:12,padding:"4px 12px",borderRadius:6,border:"0.5px solid var(--bds)",background:"var(--bs)",color:"var(--ts)",marginTop:4}} onClick={()=>addT(si)}>+ Add task</button>
-              <div style={{marginTop:10}}><div style={{fontSize:11,color:"var(--ts)",marginBottom:4}}>Notes</div><Txt value={s.notes} onChange={v=>upd(si,"notes",v)} multi/></div>
-            </div>
-          )}
+  return(<div>
+    <div className="g4"><SC label="Sections" val={sections.length}/><SC label="Prio 1" val={sections.filter(s=>s.prio==="P1").length} color="#A32D2D"/><SC label="Active" val={sections.filter(s=>["In Progress","In Cleanup","Collecting"].includes(s.status)).length} color="#185FA5"/><SC label="Done" val={sections.filter(s=>s.status==="Done").length} color="#3B6D11"/></div>
+    {sections.map((s,si)=>(<div key={si} className="sec-row">
+      <div className="sec-hdr">
+        <span style={{fontSize:12,color:"var(--tt)",minWidth:20}}>{s.num}</span>
+        <span style={{fontSize:13,fontWeight:500,flex:1}}>{s.title}</span>
+        <OTag owner={s.owner} owners={owners}/>
+        <Sel value={s.prio} options={priorities} onChange={v=>upd(si,"prio",v)} small/>
+        <Sel value={s.status} options={statuses} onChange={v=>upd(si,"status",v)} small/>
+        <button onClick={()=>setOpen(open===si?null:si)} style={{fontSize:12,background:"none",border:"none",color:"var(--tt)",padding:0}}>{open===si?"▲":"▼"}</button>
+      </div>
+      {open===si&&(<div style={{padding:"0 1rem 1rem",borderTop:"0.5px solid var(--bdt)"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:10,marginBottom:10}}>
+          <div><div style={{fontSize:11,color:"var(--ts)",marginBottom:4}}>Owner</div><Sel value={s.owner} options={ownerOpts} onChange={v=>upd(si,"owner",v)}/></div>
+          <div><div style={{fontSize:11,color:"var(--ts)",marginBottom:4}}>Flag / blocker</div><Txt value={s.flag} onChange={v=>upd(si,"flag",v)}/></div>
         </div>
-      ))}
-    </div>
-  );
-}
+        {s.flag&&<FlagB text={s.flag}/>}
+        <div style={{fontSize:11,color:"var(--ts)",marginBottom:6}}>Tasks</div>
+        {s.tasks.map((t,ti)=>(<div key={ti} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><Sel value={t.status} options={statuses} onChange={v=>updT(si,ti,"status",v)} small/><Txt value={t.task} onChange={v=>updT(si,ti,"task",v)} sty={{fontSize:12}}/><button onClick={()=>rmT(si,ti)} style={{fontSize:14,color:"#A32D2D",background:"none",border:"none",padding:"0 4px",flexShrink:0}}>×</button></div>))}
+        <button style={{fontSize:12,padding:"4px 12px",borderRadius:6,border:"0.5px solid var(--bds)",background:"var(--bs)",color:"var(--ts)",marginTop:4}} onClick={()=>addT(si)}>+ Add task</button>
+        <div style={{marginTop:10}}><div style={{fontSize:11,color:"var(--ts)",marginBottom:4}}>Notes</div><Txt value={s.notes} onChange={v=>upd(si,"notes",v)} multi/></div>
+      </div>)}
+    </div>))}
+  </div>);}
 
 // --- Action Items ---
 function ActionItems({actions,setActions,cfg}){
-  const {owners,action_statuses}=cfg;
-  const [editId,setEditId]=useState(null);
-  const [view,setView]=useState("action");
+  const {owners,action_statuses}=cfg;const [editId,setEditId]=useState(null);const [view,setView]=useState("action");
   const upd=(id,f,v)=>setActions(prev=>prev.map(a=>a.id===id?{...a,[f]:v}:a));
   const add=type=>{const id=Math.max(0,...actions.map(a=>a.id))+1;setActions([...actions,{id,owner:owners[0]||"David",action:type==="question"?"New open question":"New action item",due:"TBD",dep:"",status:type==="question"?"Decision Needed":"Committed",type}]);};
   const rm=id=>setActions(prev=>prev.filter(a=>a.id!==id));
-  const filtered=actions.filter(a=>a.type===view);
-  const ac=actions.filter(a=>a.type==="action"),qc=actions.filter(a=>a.type==="question");
+  const filtered=actions.filter(a=>a.type===view);const ac=actions.filter(a=>a.type==="action"),qc=actions.filter(a=>a.type==="question");
   const ownerOpts=[...owners,...owners.flatMap((a,i)=>owners.slice(i+1).map(b=>`${a} + ${b}`)),"All"];
-  return(
-    <div>
-      <div style={{display:"flex",gap:4,marginBottom:"1.25rem"}}>
-        {[["action","Action Items"],["question","Open Questions"]].map(([v,l])=>(<button key={v} className={`tab-btn ${view===v?"active":""}`} onClick={()=>setView(v)}>{l}</button>))}
-      </div>
-      {view==="action"&&<div className="g4"><SC label="Total" val={ac.length}/><SC label="Urgent" val={ac.filter(a=>a.status==="Urgent").length} color="#A32D2D"/><SC label="Decision needed" val={ac.filter(a=>a.status==="Decision Needed").length} color="#633806"/><SC label="Done" val={ac.filter(a=>a.status==="Done").length} color="#3B6D11"/></div>}
-      {view==="question"&&<div className="g3"><SC label="Total" val={qc.length}/><SC label="Open" val={qc.filter(a=>a.status!=="Done").length} color="#3C3489"/><SC label="Resolved" val={qc.filter(a=>a.status==="Done").length} color="#3B6D11"/></div>}
-      {filtered.map(a=>(
-        <div key={a.id} style={{background:"var(--bp)",border:`0.5px solid ${a.status==="Urgent"?"#F09595":a.status==="Done"?"#97C459":a.type==="question"?"#AFA9EC":"var(--bdt)"}`,borderRadius:8,padding:".75rem 1rem",marginBottom:8}}>
-          <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
-            <div style={{flex:1}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
-                {a.type==="question"&&<span className="pill" style={{fontSize:11,background:"#EEEDFE",color:"#3C3489"}}>?</span>}
-                <Sel value={a.status} options={a.type==="question"?["Decision Needed","In Progress","Done"]:action_statuses} onChange={v=>upd(a.id,"status",v)} small/>
-                {editId===a.id?<Sel value={a.owner} options={ownerOpts} onChange={v=>upd(a.id,"owner",v)} small/>:<OTag owner={a.owner} owners={owners}/>}
-                {editId===a.id?<Txt value={a.due} onChange={v=>upd(a.id,"due",v)} sty={{fontSize:11,width:100}}/>:<span style={{fontSize:11,color:"var(--tt)"}}>Due: {a.due}</span>}
-              </div>
-              {editId===a.id?<Txt value={a.action} onChange={v=>upd(a.id,"action",v)} multi/>:<div style={{fontSize:13,color:a.status==="Done"?"var(--ts)":"var(--tp)",textDecoration:a.status==="Done"?"line-through":"none",lineHeight:1.5}}>{a.action}</div>}
-              {editId===a.id&&a.type==="action"&&<div style={{marginTop:6}}><div style={{fontSize:11,color:"var(--ts)",marginBottom:3}}>Dependency</div><Txt value={a.dep} onChange={v=>upd(a.id,"dep",v)} sty={{fontSize:12}}/></div>}
-              {a.dep&&editId!==a.id&&<div style={{fontSize:11,color:"#633806",background:"#FAEEDA",borderRadius:4,padding:"3px 8px",marginTop:6,display:"inline-block"}}>◆ {a.dep}</div>}
-            </div>
-            <div style={{display:"flex",gap:4,flexShrink:0}}>
-              <button style={{fontSize:11,padding:"3px 8px",borderRadius:6,border:"0.5px solid var(--bds)",background:"none",color:"var(--ts)"}} onClick={()=>setEditId(editId===a.id?null:a.id)}>{editId===a.id?"Done":"Edit"}</button>
-              <button style={{fontSize:11,padding:"3px 8px",borderRadius:6,border:"0.5px solid #F09595",background:"none",color:"#A32D2D"}} onClick={()=>rm(a.id)}>×</button>
-            </div>
+  return(<div>
+    <div style={{display:"flex",gap:4,marginBottom:"1.25rem"}}>{[["action","Action Items"],["question","Open Questions"]].map(([v,l])=>(<button key={v} className={`tab-btn ${view===v?"active":""}`} onClick={()=>setView(v)}>{l}</button>))}</div>
+    {view==="action"&&<div className="g4"><SC label="Total" val={ac.length}/><SC label="Urgent" val={ac.filter(a=>a.status==="Urgent").length} color="#A32D2D"/><SC label="Decision needed" val={ac.filter(a=>a.status==="Decision Needed").length} color="#633806"/><SC label="Done" val={ac.filter(a=>a.status==="Done").length} color="#3B6D11"/></div>}
+    {view==="question"&&<div className="g3"><SC label="Total" val={qc.length}/><SC label="Open" val={qc.filter(a=>a.status!=="Done").length} color="#3C3489"/><SC label="Resolved" val={qc.filter(a=>a.status==="Done").length} color="#3B6D11"/></div>}
+    {filtered.map(a=>(<div key={a.id} style={{background:"var(--bp)",border:`0.5px solid ${a.status==="Urgent"?"#F09595":a.status==="Done"?"#97C459":a.type==="question"?"#AFA9EC":"var(--bdt)"}`,borderRadius:8,padding:".75rem 1rem",marginBottom:8}}>
+      <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
+        <div style={{flex:1}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+            {a.type==="question"&&<span className="pill" style={{fontSize:11,background:"#EEEDFE",color:"#3C3489"}}>?</span>}
+            <Sel value={a.status} options={a.type==="question"?["Decision Needed","In Progress","Done"]:action_statuses} onChange={v=>upd(a.id,"status",v)} small/>
+            {editId===a.id?<Sel value={a.owner} options={ownerOpts} onChange={v=>upd(a.id,"owner",v)} small/>:<OTag owner={a.owner} owners={owners}/>}
+            {editId===a.id?<Txt value={a.due} onChange={v=>upd(a.id,"due",v)} sty={{fontSize:11,width:100}}/>:<span style={{fontSize:11,color:"var(--tt)"}}>Due: {a.due}</span>}
           </div>
+          {editId===a.id?<Txt value={a.action} onChange={v=>upd(a.id,"action",v)} multi/>:<div style={{fontSize:13,color:a.status==="Done"?"var(--ts)":"var(--tp)",textDecoration:a.status==="Done"?"line-through":"none",lineHeight:1.5}}>{a.action}</div>}
+          {editId===a.id&&a.type==="action"&&<div style={{marginTop:6}}><div style={{fontSize:11,color:"var(--ts)",marginBottom:3}}>Dependency</div><Txt value={a.dep} onChange={v=>upd(a.id,"dep",v)} sty={{fontSize:12}}/></div>}
+          {a.dep&&editId!==a.id&&<div style={{fontSize:11,color:"#633806",background:"#FAEEDA",borderRadius:4,padding:"3px 8px",marginTop:6,display:"inline-block"}}>◆ {a.dep}</div>}
         </div>
-      ))}
-      <button style={{fontSize:13,padding:"7px 16px",borderRadius:8,border:"0.5px solid var(--bds)",background:"var(--bs)",color:"var(--tp)",marginTop:4}} onClick={()=>add(view)}>+ Add {view==="question"?"open question":"action item"}</button>
+        <div style={{display:"flex",gap:4,flexShrink:0}}>
+          <button style={{fontSize:11,padding:"3px 8px",borderRadius:6,border:"0.5px solid var(--bds)",background:"none",color:"var(--ts)"}} onClick={()=>setEditId(editId===a.id?null:a.id)}>{editId===a.id?"Done":"Edit"}</button>
+          <button style={{fontSize:11,padding:"3px 8px",borderRadius:6,border:"0.5px solid #F09595",background:"none",color:"#A32D2D"}} onClick={()=>rm(a.id)}>×</button>
+        </div>
+      </div>
+    </div>))}
+    <button style={{fontSize:13,padding:"7px 16px",borderRadius:8,border:"0.5px solid var(--bds)",background:"var(--bs)",color:"var(--tp)",marginTop:4}} onClick={()=>add(view)}>+ Add {view==="question"?"open question":"action item"}</button>
+  </div>);}
+
+// --- My To-Dos (cross-initiative) ---
+function MyTodos({user,allInitData,cfg,onUpdate}){
+  const {owners,statuses,action_statuses}=cfg;const name=user.username;const col=oc(name,owners);
+  const allItems=Object.entries(allInitData).flatMap(([iid,{sections,actions,initiative}])=>{
+    const tasks=sections.flatMap((s,si)=>s.tasks.map((t,ti)=>({...t,si,ti,sectionTitle:s.title,sectionNum:s.num,iid,iname:initiative.name,icolor:initiative.color,source:"task"}))).filter(t=>sections[t.si].owner.split("+").map(o=>o.trim()).includes(name));
+    const acts=actions.filter(a=>a.type==="action"&&a.owner.split("+").map(o=>o.trim()).includes(name)).map(a=>({...a,iid,iname:initiative.name,icolor:initiative.color,source:"action"}));
+    return [...tasks,...acts];
+  });
+  const open=allItems.filter(t=>t.status!=="Done"),done=allItems.filter(t=>t.status==="Done");
+  function markTask(iid,si,ti,status){const d=allInitData[iid];if(!d)return;const ns=[...d.sections];const t=[...ns[si].tasks];t[ti]={...t[ti],status};ns[si]={...ns[si],tasks:t};onUpdate(iid,ns,d.actions);}
+  function markAction(iid,id,status){const d=allInitData[iid];if(!d)return;const na=d.actions.map(a=>a.id===id?{...a,status}:a);onUpdate(iid,d.sections,na);}
+  return(<div>
+    <div style={{background:`${col}12`,border:`1px solid ${col}33`,borderRadius:12,padding:"1rem 1.25rem",marginBottom:"1.25rem",display:"flex",alignItems:"center",gap:12}}>
+      <div style={{width:40,height:40,borderRadius:"50%",background:col+"22",border:`2px solid ${col}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,fontWeight:700,color:col,flexShrink:0}}>{name[0]}</div>
+      <div><div style={{fontSize:15,fontWeight:500}}>{name}'s to-dos · all initiatives</div><div style={{fontSize:12,color:"var(--ts)"}}>{open.length} open · {done.length} done</div></div>
     </div>
-  );
+    <div className="g4" style={{marginBottom:"1.25rem"}}><SC label="Open tasks" val={open.filter(t=>t.source==="task").length} color={col}/><SC label="Open actions" val={open.filter(t=>t.source==="action").length} color="#633806"/><SC label="Tasks done" val={done.filter(t=>t.source==="task").length} color="#3B6D11"/><SC label="Actions done" val={done.filter(t=>t.source==="action").length} color="#3B6D11"/></div>
+    {open.length===0&&<div className="card" style={{textAlign:"center",padding:"2rem",color:"var(--ts)"}}><div style={{fontSize:32,marginBottom:8}}>🎉</div><div style={{fontSize:14,fontWeight:500,marginBottom:4}}>All caught up!</div><div style={{fontSize:13}}>No open tasks or action items assigned to you.</div></div>}
+    {open.filter(t=>t.source==="task").length>0&&<><div style={{fontSize:13,fontWeight:500,marginBottom:8}}>Open tasks</div>
+      {open.filter(t=>t.source==="task").map((t,i)=>(<div key={i} style={{background:"var(--bp)",border:"0.5px solid var(--bdt)",borderRadius:8,padding:".75rem 1rem",marginBottom:8,display:"flex",alignItems:"flex-start",gap:12}}>
+        <input type="checkbox" checked={false} onChange={()=>markTask(t.iid,t.si,t.ti,"Done")} style={{width:15,height:15,cursor:"pointer",accentColor:col,marginTop:2}}/>
+        <div style={{flex:1}}><div style={{fontSize:13,lineHeight:1.4,marginBottom:4}}>{t.task}</div><div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}><SPill status={t.status} small/><span style={{fontSize:11,color:"var(--tt)"}}>§{t.sectionNum} {t.sectionTitle}</span><span className="pill" style={{fontSize:10,background:t.icolor+"18",color:t.icolor,border:`1px solid ${t.icolor}33`}}>{t.iname}</span></div></div>
+        <Sel value={t.status} options={statuses} onChange={v=>markTask(t.iid,t.si,t.ti,v)} small/>
+      </div>))}
+    </>}
+    {open.filter(t=>t.source==="action").length>0&&<><div style={{fontSize:13,fontWeight:500,margin:"1rem 0 8px"}}>Open action items</div>
+      {open.filter(t=>t.source==="action").map((a,i)=>(<div key={i} style={{background:"var(--bp)",border:`0.5px solid ${a.status==="Urgent"?"#F09595":"var(--bdt)"}`,borderRadius:8,padding:".75rem 1rem",marginBottom:8,display:"flex",alignItems:"flex-start",gap:12}}>
+        <input type="checkbox" checked={false} onChange={()=>markAction(a.iid,a.id,"Done")} style={{width:15,height:15,cursor:"pointer",accentColor:col,marginTop:2}}/>
+        <div style={{flex:1}}><div style={{fontSize:13,lineHeight:1.4,marginBottom:4}}>{a.action}</div><div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}><span className="pill" style={{fontSize:11,background:(ASC_F[a.status]||"#888")+"22",color:ASC_F[a.status]||"#888"}}>{a.status}</span><span style={{fontSize:11,color:"var(--tt)"}}>Due: {a.due}</span><span className="pill" style={{fontSize:10,background:a.icolor+"18",color:a.icolor,border:`1px solid ${a.icolor}33`}}>{a.iname}</span></div></div>
+        <Sel value={a.status} options={action_statuses} onChange={v=>markAction(a.iid,a.id,v)} small/>
+      </div>))}
+    </>}
+    {done.length>0&&<><div style={{fontSize:13,fontWeight:500,margin:"1rem 0 8px",color:"var(--ts)"}}>Completed ({done.length})</div>
+      {done.map((t,i)=>(<div key={i} style={{background:"var(--bp)",border:"0.5px solid var(--bdt)",borderRadius:8,padding:".75rem 1rem",marginBottom:8,display:"flex",alignItems:"flex-start",gap:12,opacity:.6}}>
+        <input type="checkbox" checked disabled style={{width:15,height:15,accentColor:col,marginTop:2}}/>
+        <div style={{flex:1}}><div style={{fontSize:13,textDecoration:"line-through",color:"var(--ts)"}}>{t.source==="task"?t.task:t.action}</div><span className="pill" style={{fontSize:10,background:t.icolor+"18",color:t.icolor,border:`1px solid ${t.icolor}33`}}>{t.iname}</span></div>
+      </div>))}
+    </>}
+  </div>);}
+
+// --- Admin Panel ---
+function AdminPanel({cfg,setCfg,initiatives,setInitiatives}){
+  const [users,setUsers]=useState([]);const [loading,setLoading]=useState(true);
+  const [newUser,setNewUser]=useState({username:"",password:"",role:"member"});
+  const [newPw,setNewPw]=useState({});const [msg,setMsg]=useState({text:"",type:"ok"});
+  const [lc,setLc]=useState(cfg);const [addVals,setAddVals]=useState({statuses:"",priorities:"",owners:"",action_statuses:""});
+  const [editInit,setEditInit]=useState(null);
+  const [newInit,setNewInit]=useState({name:"",description:"",icon:"📋",color:"#378ADD"});
+  const COLORS=["#378ADD","#1D9E75","#7F77DD","#D85A30","#BA7517","#D4537E","#0F6E56","#E24B4A"];
+  useEffect(()=>{dbGetUsers().then(u=>{setUsers(u||[]);setLoading(false);});},[]);
+  function flash(text,type="ok"){setMsg({text,type});setTimeout(()=>setMsg({text:"",type:"ok"}),3500);}
+  async function addUser(){if(!newUser.username||!newUser.password){flash("Please fill in name and password.","err");return;}await dbAddUser(newUser.username,newUser.password,newUser.role);const u=await dbGetUsers();setUsers(u||[]);setNewUser({username:"",password:"",role:"member"});flash(`User "${newUser.username}" added.`);}
+  async function delUser(u){if(!confirm(`Remove user "${u}"?`))return;await dbDelUser(u);const us=await dbGetUsers();setUsers(us||[]);flash(`User "${u}" removed.`);}
+  async function updPw(u){const p=newPw[u];if(!p)return;await dbSetPw(u,p);setNewPw(prev=>({...prev,[u]:""}));flash(`Password updated for "${u}".`);}
+  async function saveCfg(){await Promise.all(Object.keys(lc).map(k=>dbSetConfig(k,lc[k])));setCfg(lc);flash("Configuration saved.");}
+  function addToList(key){const v=addVals[key].trim();if(!v)return;setLc(c=>({...c,[key]:[...c[key],v]}));setAddVals(p=>({...p,[key]:"""}));}
+  function rmFromList(key,i){setLc(c=>({...c,[key]:c[key].filter((_,j)=>j!==i)}));}
+  async function saveInitiative(){
+    if(!newInit.name.trim()){flash("Please enter a name.","err");return;}
+    const id=newInit.name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+    const updated={...initiatives,list:[...initiatives.list,{id,name:newInit.name,description:newInit.description,icon:newInit.icon,color:newInit.color,archived:false}]};
+    await dbSetInitiatives(updated);setInitiatives(updated);
+    setNewInit({name:"",description:"",icon:"📋",color:"#378ADD"});flash(`Initiative "${newInit.name}" created.`);
+  }
+  async function archiveInit(id,archived){
+    const updated={...initiatives,list:initiatives.list.map(i=>i.id===id?{...i,archived}:i)};
+    await dbSetInitiatives(updated);setInitiatives(updated);flash(archived?"Initiative archived.":"Initiative restored.");
+  }
+  async function updateInit(id,changes){
+    const updated={...initiatives,list:initiatives.list.map(i=>i.id===id?{...i,...changes}:i)};
+    await dbSetInitiatives(updated);setInitiatives(updated);setEditInit(null);flash("Initiative updated.");
+  }
+  return(<div>
+    <div style={{background:"#FAEEDA",border:"1px solid #EF9F27",borderRadius:8,padding:"8px 12px",marginBottom:"1.25rem",fontSize:12,color:"#633806"}}>🔒 Admin panel — visible only to admins.</div>
+    {msg.text&&<div className={msg.type==="err"?"err-msg":"ok-msg"}>{msg.text}</div>}
+    <div className="admin-section">
+      <h3>Initiatives</h3>
+      {initiatives.list.map(init=>(<div key={init.id} style={{background:"var(--bs)",borderRadius:8,padding:"10px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+        {editInit===init.id?(<>
+          <input value={init.name} onChange={e=>updateInit(init.id,{name:e.target.value})} style={{flex:1,minWidth:100,fontSize:13}}/>
+          <input value={init.description||""} onChange={e=>updateInit(init.id,{description:e.target.value})} style={{flex:2,minWidth:150,fontSize:12}} placeholder="Description"/>
+          <input value={init.icon||"📋"} onChange={e=>updateInit(init.id,{icon:e.target.value})} style={{width:40,fontSize:13}}/>
+          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{COLORS.map(c=><button key={c} onClick={()=>updateInit(init.id,{color:c})} style={{width:18,height:18,borderRadius:"50%",background:c,border:init.color===c?"2px solid var(--tp)":"2px solid transparent",cursor:"pointer"}}/>)}</div>
+          <button className="btn-s" style={{fontSize:11,padding:"4px 8px"}} onClick={()=>setEditInit(null)}>Done</button>
+        </>):(<>
+          <span style={{fontSize:18}}>{init.icon||"📋"}</span>
+          <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500}}>{init.name}</div><div style={{fontSize:11,color:"var(--ts)"}}>{init.description||"No description"}</div></div>
+          <span className="pill" style={{fontSize:10,background:init.archived?"#F1EFE8":"#EAF3DE",color:init.archived?"#5F5E5A":"#3B6D11"}}>{init.archived?"Archived":"Active"}</span>
+          <button className="btn-s" style={{fontSize:11,padding:"4px 8px"}} onClick={()=>setEditInit(init.id)}>Edit</button>
+          {!init.archived?<button className="btn-d" style={{fontSize:11,padding:"4px 8px"}} onClick={()=>archiveInit(init.id,true)}>Archive</button>:<button className="btn-s" style={{fontSize:11,padding:"4px 8px"}} onClick={()=>archiveInit(init.id,false)}>Restore</button>}
+        </>)}
+      </div>))}
+      <div style={{marginTop:14,padding:12,background:"var(--bs)",borderRadius:8,border:"0.5px solid var(--bdt)"}}>
+        <div style={{fontSize:12,fontWeight:500,marginBottom:8}}>Create new initiative</div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
+          <input value={newInit.name} onChange={e=>setNewInit(p=>({...p,name:e.target.value}))} placeholder="Initiative name" style={{flex:1,minWidth:140,fontSize:13}}/>
+          <input value={newInit.description} onChange={e=>setNewInit(p=>({...p,description:e.target.value}))} placeholder="Short description" style={{flex:2,minWidth:160,fontSize:12}}/>
+          <input value={newInit.icon} onChange={e=>setNewInit(p=>({...p,icon:e.target.value}))} style={{width:40,fontSize:13}} placeholder="📋"/>
+        </div>
+        <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:10,flexWrap:"wrap"}}>
+          <span style={{fontSize:12,color:"var(--ts)"}}>Color:</span>
+          {COLORS.map(c=><button key={c} onClick={()=>setNewInit(p=>({...p,color:c}))} style={{width:20,height:20,borderRadius:"50%",background:c,border:newInit.color===c?"2px solid var(--tp)":"2px solid transparent",cursor:"pointer"}}/>)}
+        </div>
+        <button className="btn-p" style={{fontSize:12,padding:"5px 14px"}} onClick={saveInitiative}>Create initiative</button>
+      </div>
+    </div>
+    <div className="admin-section">
+      <h3>Team members</h3>
+      {loading?<Spinner size={24}/>:users.map(u=>(<div key={u.username} className="user-row">
+        <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:120}}><div style={{width:28,height:28,borderRadius:"50%",background:oc(u.username,[])+"22",border:`1.5px solid ${oc(u.username,[])}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,color:oc(u.username,[])}}>{u.username[0]}</div><span style={{fontSize:13,fontWeight:500}}>{u.username}</span><span className="pill" style={{fontSize:10,background:u.role==="admin"?"#FAEEDA":"#F1EFE8",color:u.role==="admin"?"#633806":"#5F5E5A"}}>{u.role}</span></div>
+        <input type="password" value={newPw[u.username]||""} onChange={e=>setNewPw(p=>({...p,[u.username]:e.target.value}))} placeholder="New password" style={{width:140,fontSize:12}}/>
+        <button className="btn-p" style={{fontSize:11,padding:"4px 10px"}} onClick={()=>updPw(u.username)}>Update</button>
+        {u.role!=="admin"&&<button className="btn-d" onClick={()=>delUser(u.username)}>Remove</button>}
+      </div>))}
+      <div style={{marginTop:14,padding:12,background:"var(--bs)",borderRadius:8}}>
+        <div style={{fontSize:12,fontWeight:500,marginBottom:8}}>Add new user</div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <input value={newUser.username} onChange={e=>setNewUser(p=>({...p,username:e.target.value}))} placeholder="Name" style={{flex:1,minWidth:100,fontSize:12}}/>
+          <input type="password" value={newUser.password} onChange={e=>setNewUser(p=>({...p,password:e.target.value}))} placeholder="Password" style={{flex:1,minWidth:100,fontSize:12}}/>
+          <Sel value={newUser.role} options={["member","admin"]} onChange={v=>setNewUser(p=>({...p,role:v}))} small/>
+          <button className="btn-p" style={{fontSize:12,padding:"5px 14px"}} onClick={addUser}>Add</button>
+        </div>
+      </div>
+    </div>
+    <div className="admin-section">
+      <h3>Configuration</h3>
+      {[{key:"statuses",label:"Section statuses"},{key:"priorities",label:"Priority levels"},{key:"owners",label:"Owner options"},{key:"action_statuses",label:"Action item statuses"}].map(({key,label})=>(<div key={key} style={{marginBottom:16}}>
+        <div style={{fontSize:12,color:"var(--ts)",marginBottom:6}}>{label}</div>
+        <div className="tag-row" style={{marginBottom:6}}>{lc[key].map((v,i)=>(<div key={i} className="tag-item"><span>{v}</span><button onClick={()=>rmFromList(key,i)} style={{background:"none",border:"none",color:"#A32D2D",fontSize:14,lineHeight:1,padding:0}}>×</button></div>))}</div>
+        <div style={{display:"flex",gap:6}}><input value={addVals[key]} onChange={e=>setAddVals(p=>({...p,[key]:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&addToList(key)} placeholder={`Add…`} style={{fontSize:12,flex:1}}/><button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>addToList(key)}>Add</button></div>
+      </div>))}
+      <button className="btn-p" onClick={saveCfg}>Save configuration</button>
+    </div>
+  </div>);}
+
+// --- Initiative View (main tabs) ---
+function InitiativeView({initiative,sections,setSections,actions,setActions,cfg,user,sync,onBack,onImport,showImport,setShowImport,onChangePw,onLogout}){
+  const [tab,setTab]=useState(0);const isAdmin=user.role==="admin";
+  const TABS=["Dashboard","Kanban","Project Plan","Action Items","My To-Dos",...(isAdmin?["⚙ Admin"]:[])];
+  const ownerOpts=cfg.owners;
+  return(<div>
+    {showImport&&<SprintModal sections={sections} actions={actions} owners={ownerOpts} onApply={(ns,na)=>{setSections(ns);setActions(na);}} onClose={()=>setShowImport(false)}/>}
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"1.25rem",flexWrap:"wrap",gap:8}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={onBack} style={{background:"none",border:"0.5px solid var(--bds)",borderRadius:var(--r),padding:"5px 10px",fontSize:12,color:"var(--ts)",cursor:"pointer"}}>← All initiatives</button>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{width:32,height:32,borderRadius:8,background:initiative.color+"22",border:`2px solid ${initiative.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>{initiative.icon||"📋"}</div>
+          <div><div style={{fontSize:16,fontWeight:500}}>{initiative.name}</div><div style={{fontSize:12,color:"var(--ts)"}}>SE Playbook Project Planner · Intact</div></div>
+        </div>
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+        <SyncDot s={sync}/>
+        {isAdmin&&<button onClick={()=>setShowImport(true)} style={{fontSize:13,padding:"7px 14px",borderRadius:8,border:"none",background:"#378ADD",color:"#fff",fontWeight:500}}>📋 Update from sprint</button>}
+        <div style={{display:"flex",alignItems:"center",gap:6,background:"var(--bs)",borderRadius:8,padding:"5px 10px",border:"0.5px solid var(--bdt)"}}>
+          <div style={{width:22,height:22,borderRadius:"50%",background:oc(user.username,cfg.owners)+"22",border:`1.5px solid ${oc(user.username,cfg.owners)}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:600,color:oc(user.username,cfg.owners)}}>{user.username[0]}</div>
+          <span style={{fontSize:12,fontWeight:500}}>{user.username}</span>
+          <span style={{color:"var(--bds)",fontSize:12}}>|</span>
+          <button onClick={onChangePw} style={{background:"none",border:"none",fontSize:11,color:"var(--ts)",cursor:"pointer",padding:0}}>Change password</button>
+          <span style={{color:"var(--bds)",fontSize:12}}>|</span>
+          <button onClick={onLogout} style={{background:"none",border:"none",fontSize:11,color:"var(--tt)",cursor:"pointer",padding:0}}>Sign out</button>
+        </div>
+      </div>
+    </div>
+    <div style={{display:"flex",gap:4,marginBottom:"1.25rem",flexWrap:"wrap"}}>{TABS.map((t,i)=><button key={t} className={`tab-btn ${tab===i?"active":""}`} onClick={()=>setTab(i)}>{t}</button>)}</div>
+    {tab===0&&<Dashboard sections={sections} actions={actions} cfg={cfg}/>}
+    {tab===1&&<Kanban sections={sections} setSections={setSections} cfg={cfg}/>}
+    {tab===2&&<ProjectPlan sections={sections} setSections={setSections} cfg={cfg}/>}
+    {tab===3&&<ActionItems actions={actions} setActions={setActions} cfg={cfg}/>}
+    {tab===4&&<MyTodosWrapper user={user} cfg={cfg} currentIid={initiative.id} currentSections={sections} currentActions={actions} onCurrentUpdate={(ns,na)=>{setSections(ns);setActions(na);}}/>}
+    {tab===5&&isAdmin&&<AdminPanelWrapper cfg={cfg}/>}
+  </div>);}
+
+// Wrappers that load cross-initiative data for My To-Dos and pass admin through
+function MyTodosWrapper({user,cfg,currentIid,currentSections,currentActions,onCurrentUpdate}){
+  const [allData,setAllData]=useState(null);
+  useEffect(()=>{
+    const d={[currentIid]:{sections:currentSections,actions:currentActions,initiative:{name:"Current",color:"#378ADD"}}};
+    setAllData(d);
+  },[currentSections,currentActions]);
+  function handleUpdate(iid,ns,na){if(iid===currentIid)onCurrentUpdate(ns,na);}
+  if(!allData)return <div style={{padding:"2rem",textAlign:"center"}}><Spinner/></div>;
+  return <MyTodos user={user} allInitData={allData} cfg={cfg} onUpdate={handleUpdate}/>;
 }
+function AdminPanelWrapper({cfg}){return <div style={{padding:"1rem",background:"var(--bs)",borderRadius:8,fontSize:13,color:"var(--ts)"}}>Go to the initiatives screen to manage initiatives, users, and configuration.</div>;}
 
 // --- Root ---
 function App(){
   const [user,setUser]=useState(null);
-  const [tab,setTab]=useState(0);
-  const [sections,setSS]=useState(DEF_S);
-  const [actions,setAS]=useState(DEF_A);
+  const [appLoaded,setAppLoaded]=useState(false);
+  const [initiatives,setInitiatives]=useState({list:[]});
   const [cfg,setCfg]=useState(DEF_CFG);
-  const [loaded,setLoaded]=useState(false);
+  const [selectedInit,setSelectedInit]=useState(null);
+  const [sections,setSectionsRaw]=useState([]);
+  const [actions,setActionsRaw]=useState([]);
   const [sync,setSync]=useState("idle");
   const [showImport,setShowImport]=useState(false);
   const [showChangePw,setShowChangePw]=useState(false);
+  const [view,setView]=useState("picker"); // picker | initiative | admin
   const timer=useRef(null);
 
-  useEffect(()=>{const s=sessionStorage.getItem("sep_user");if(s){try{setUser(JSON.parse(s));}catch(e){}}else{setLoaded(true);};},[]);
+  useEffect(()=>{const s=sessionStorage.getItem("sep_user");if(s){try{setUser(JSON.parse(s));}catch(e){}}setAppLoaded(true);},[]);
 
   useEffect(()=>{
-    if(!user){setLoaded(false);return;}
-    Promise.all([dbGetState(),dbGetConfig()]).then(([state,cfgRows])=>{
-      if(state?.sections)setSS(state.sections);
-      if(state?.actions)setAS(state.actions);
+    if(!user)return;
+    Promise.all([dbGetInitiatives(),dbGetConfig()]).then(([inits,cfgRows])=>{
+      setInitiatives(inits||{list:[]});
       if(cfgRows?.length){const c={...DEF_CFG};cfgRows.forEach(r=>{if(c[r.key]!==undefined)c[r.key]=r.value;});setCfg(c);}
-      setLoaded(true);
-    }).catch(()=>setLoaded(true));
+    });
   },[user]);
 
-  const persist=useCallback((s,a)=>{
+  const persist=useCallback((iid,s,a)=>{
     if(timer.current)clearTimeout(timer.current);
     setSync("syncing");
-    timer.current=setTimeout(()=>{dbSetState({sections:s,actions:a}).then(()=>{setSync("saved");setTimeout(()=>setSync("idle"),3000);}).catch(()=>setSync("error"));},900);
+    timer.current=setTimeout(()=>{dbSetState(iid,{sections:s,actions:a}).then(()=>{setSync("saved");setTimeout(()=>setSync("idle"),3000);}).catch(()=>setSync("error"));},900);
   },[]);
 
-  const setSections=v=>{setSS(v);persist(v,actions);};
-  const setActions=v=>{setAS(v);persist(sections,v);};
-  const applyImport=(ns,na)=>{setSS(ns);setAS(na);persist(ns,na);};
-  function logout(){sessionStorage.removeItem("sep_user");setUser(null);setTab(0);}
+  async function selectInitiative(init){
+    setSelectedInit(init);
+    const state=await dbGetState(init.id);
+    if(state?.sections){setSectionsRaw(state.sections);setActionsRaw(state.actions||[]);}
+    else{
+      // New initiative — seed with defaults if it's the SE playbook, else empty
+      const s=init.id==="se-playbook"?DEF_SECTIONS:[];
+      const a=init.id==="se-playbook"?DEF_ACTIONS:[];
+      setSectionsRaw(s);setActionsRaw(a);
+    }
+    setView("initiative");
+  }
 
-  if(!user||!loaded&&!user)return <LoginScreen onLogin={u=>{setUser(u);}}/>;
-  if(!loaded)return(<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:12}}><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style><Spinner/><div style={{fontSize:14,color:"var(--ts)"}}>Loading workspace…</div></div>);
+  const setSections=v=>{setSectionsRaw(v);if(selectedInit)persist(selectedInit.id,v,actions);};
+  const setActions=v=>{setActionsRaw(v);if(selectedInit)persist(selectedInit.id,sections,v);};
+  function logout(){sessionStorage.removeItem("sep_user");setUser(null);setSelectedInit(null);setView("picker");}
 
-  const isAdmin=user?.role==="admin";
-  const TABS=["Dashboard","Kanban","Project Plan","Action Items","My To-Dos",...(isAdmin?["⚙ Admin"]:[])];
-  const ti=Math.min(tab,TABS.length-1);
+  if(!appLoaded)return null;
+  if(!user)return <LoginScreen onLogin={u=>setUser(u)}/>;
+
+  const isAdmin=user.role==="admin";
+
+  if(view==="initiative"&&selectedInit){
+    return(
+      <div>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        {showChangePw&&<ChangePwModal user={user} onClose={changed=>{setShowChangePw(false);if(changed)logout();}}/>}
+        <InitiativeView
+          initiative={selectedInit} sections={sections} setSections={setSections}
+          actions={actions} setActions={setActions} cfg={cfg} user={user} sync={sync}
+          onBack={()=>setView("picker")} onImport={()=>setShowImport(true)}
+          showImport={showImport} setShowImport={setShowImport}
+          onChangePw={()=>setShowChangePw(true)} onLogout={logout}
+        />
+      </div>
+    );
+  }
 
   return(
-    <div className="app-wrap">
+    <div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      {showImport&&<SprintModal sections={sections} actions={actions} owners={cfg.owners} onApply={applyImport} onClose={()=>setShowImport(false)}/>}
-      {showChangePw&&<ChangePwModal user={user} onClose={changed=>{setShowChangePw(false);if(changed){logout();}}}/>}
-
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"1.25rem",flexWrap:"wrap",gap:8}}>
+      {showChangePw&&<ChangePwModal user={user} onClose={changed=>{setShowChangePw(false);if(changed)logout();}}/>}
+      {view==="admin"&&isAdmin?(
         <div>
-          <h1 style={{fontSize:20,fontWeight:500,marginBottom:4}}>SE Playbook Project Planner</h1>
-          <p style={{fontSize:13,color:"var(--ts)"}}>Intact Solution Engineering · Shared workspace</p>
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-          <SyncDot s={sync}/>
-          {isAdmin&&<button onClick={()=>setShowImport(true)} style={{fontSize:13,padding:"7px 14px",borderRadius:8,border:"none",background:"#378ADD",color:"#fff",fontWeight:500}}>📋 Update from sprint</button>}
-          <div style={{display:"flex",alignItems:"center",gap:6,background:"var(--bs)",borderRadius:8,padding:"5px 10px",border:"0.5px solid var(--bdt)"}}>
-            <div style={{width:22,height:22,borderRadius:"50%",background:oc(user.username,cfg.owners)+"22",border:`1.5px solid ${oc(user.username,cfg.owners)}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:600,color:oc(user.username,cfg.owners)}}>{user.username[0]}</div>
-            <span style={{fontSize:12,fontWeight:500}}>{user.username}</span>
-            <span style={{color:"var(--bds)",fontSize:12}}>|</span>
-            <button onClick={()=>setShowChangePw(true)} style={{background:"none",border:"none",fontSize:11,color:"var(--ts)",cursor:"pointer",padding:0}}>Change password</button>
-            <span style={{color:"var(--bds)",fontSize:12}}>|</span>
-            <button onClick={logout} style={{background:"none",border:"none",fontSize:11,color:"var(--tt)",cursor:"pointer",padding:0}}>Sign out</button>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:"1.5rem"}}>
+            <button onClick={()=>setView("picker")} style={{background:"none",border:"0.5px solid var(--bds)",borderRadius:"8px",padding:"5px 10px",fontSize:12,color:"var(--ts)",cursor:"pointer"}}>← Back</button>
+            <h1 style={{fontSize:18,fontWeight:500}}>Admin panel</h1>
           </div>
+          <AdminPanel cfg={cfg} setCfg={setCfg} initiatives={initiatives} setInitiatives={setInitiatives}/>
         </div>
-      </div>
-
-      <div style={{display:"flex",gap:4,marginBottom:"1.25rem",flexWrap:"wrap"}}>
-        {TABS.map((t,i)=><button key={t} className={`tab-btn ${ti===i?"active":""}`} onClick={()=>setTab(i)}>{t}</button>)}
-      </div>
-
-      {ti===0&&<Dashboard sections={sections} actions={actions} cfg={cfg}/>}
-      {ti===1&&<Kanban sections={sections} setSections={setSections} cfg={cfg}/>}
-      {ti===2&&<ProjectPlan sections={sections} setSections={setSections} cfg={cfg}/>}
-      {ti===3&&<ActionItems actions={actions} setActions={setActions} cfg={cfg}/>}
-      {ti===4&&<MyTodos user={user} sections={sections} actions={actions} setSections={setSections} setActions={setActions} cfg={cfg}/>}
-      {ti===5&&isAdmin&&<AdminPanel cfg={cfg} setCfg={setCfg}/>}
+      ):(
+        <InitiativePicker
+          initiatives={initiatives.list||[]}
+          onSelect={selectInitiative}
+          onManage={()=>setView("admin")}
+          user={user}
+          onLogout={logout}
+          onChangePw={()=>setShowChangePw(true)}
+        />
+      )}
     </div>
   );
 }
