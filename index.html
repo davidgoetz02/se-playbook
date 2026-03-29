@@ -141,30 +141,36 @@ const OC_B={David:"#378ADD",Steven:"#1D9E75",Stefan:"#7F77DD",Tom:"#D85A30"};
 function oc(n,owners){return OC_B[n]||(OCP[owners.indexOf(n)%OCP.length]||"#888");}
 
 const DEF_SECTIONS=[
-  {num:1,title:"Introduction",owner:"David",prio:"P1",status:"In Progress",notes:"Partial content drafted.",flag:"",tasks:[{task:"Draft purpose, scope, and relationship to Sales Playbook",status:"In Progress"},{task:"Define when to use the handbook",status:"In Progress"}]},
-  {num:2,title:"SE Onboarding & Rollout Plan",owner:"David",prio:"P2",status:"Not Started",notes:"No documented progress.",flag:"Not started — not discussed in sprint review.",tasks:[{task:"Write 30/60/90/120/150 day ramp-up overview",status:"Not Started"},{task:"Define key milestones and KPIs",status:"Not Started"},{task:"Document internal systems & tools access",status:"Not Started"},{task:"Outline demo certification and shadowing process",status:"Not Started"}]},
-  {num:3,title:"SE Role in the Sales Process",owner:"Steven",prio:"P1",status:"In Progress",notes:"Steven spent ~2hrs updating the outline. ~50% complete.",flag:"Boundary between Steven's section and Stefan's Solution Design phase must be agreed.",tasks:[{task:"Document SE responsibilities by stage",status:"In Progress"},{task:"Write SE vs. AE ownership (RACI)",status:"In Progress"},{task:"Define technical win criteria",status:"In Progress"},{task:"Align on AESE collaboration boundaries with Stefan",status:"Not Started"}]},
-  {num:4,title:"Technical Discovery",owner:"Steven + Tom",prio:"P1",status:"In Cleanup",notes:"Tom has a 10-page Word doc. Needs restructuring.",flag:"",tasks:[{task:"Split discovery doc into generic + detailed + sector-specific sections",status:"Not Started"},{task:"Steven: review Tom's discovery doc and add content",status:"Not Started"},{task:"Upload finalised doc to SharePoint",status:"Not Started"}]},
-  {num:5,title:"Demo Execution",owner:"Steven + Tom",prio:"P1",status:"Not Started",notes:"Next priority after Discovery and Solution Design boundary is set.",flag:"Intact AI demo script and visual assets needed ahead of Q2 launch.",tasks:[{task:"Define standard vs. custom demo framework",status:"Not Started"},{task:"David: complete Intact AI demo script from Gong recordings",status:"In Progress"},{task:"David: secure Intact AI screenshots/mockups",status:"Not Started"}]},
-  {num:6,title:"Solution Design Phase",owner:"Stefan",prio:"P1",status:"In Progress",notes:"Stefan has 20+ page draft. Entry/exit triggers defined.",flag:"Roles & responsibilities within the phase unresolved — decision required from David/Armin/Brian.",tasks:[{task:"Finalise entry/exit trigger definition",status:"In Progress"},{task:"Clarify roles & responsibilities",status:"In Progress"},{task:"Create assessment agenda template",status:"Not Started"},{task:"Compact 20+ page draft into checklist-driven version",status:"Not Started"},{task:"Build 70–80% AI-assisted doc generation workflow in Claude",status:"Not Started"}]},
-  {num:7,title:"Handling Technical Objections",owner:"David",prio:"P2",status:"Not Started",notes:"Prio 2.",flag:"",tasks:[{task:"Compile objection categories",status:"Not Started"},{task:"Define escalation paths to Product, Security, Legal",status:"Not Started"}]},
+  {num:1,title:"Introduction",owner:"David",prio:"P1",status:"In Progress",notes:"Partial content drafted. David collecting bookmarks and resources to build a structured repository.",flag:"",tasks:[{task:"Draft purpose, scope, and relationship to Sales Playbook",status:"In Progress"},{task:"Define when to use the handbook",status:"In Progress"}]},
+  {num:2,title:"SE Onboarding & Rollout Plan",owner:"David",prio:"P2",status:"Not Started",notes:"Not started. No documented progress.",flag:"Not started — not discussed in sprint review.",tasks:[{task:"Write 30/60/90/120/150 day ramp-up overview",status:"Not Started"},{task:"Define key milestones and KPIs",status:"Not Started"},{task:"Document internal systems & tools access",status:"Not Started"},{task:"Outline demo certification and shadowing process",status:"Not Started"}]},
+  {num:3,title:"SE Role in the Sales Process",owner:"Steven",prio:"P1",status:"In Progress",notes:"Steven spent ~2hrs updating the outline with insights on discovery and AE/SE collaboration. Approx 50% complete. Steven on vacation after Mon Mar 31 for ~2 weeks.",flag:"Boundary between Steven's section and Stefan's Solution Design phase — alignment call booked for Mon Mar 31.",tasks:[{task:"Document SE responsibilities by stage",status:"In Progress"},{task:"Write SE vs. AE ownership (RACI)",status:"In Progress"},{task:"Define technical win criteria",status:"In Progress"},{task:"Align on AE/SE collaboration boundaries with Stefan (Mon Mar 31 call)",status:"Not Started"}]},
+  {num:4,title:"Technical Discovery",owner:"Steven + Tom",prio:"P1",status:"In Progress",notes:"Tom has a 10-page Word doc covering discovery process, questions to ask, what to listen for, and IPLP module mapping. Plan is to split into: initial scoping, detailed scoping, and sector-specific scoping sections. Next step: use Certified Humane transcript to enrich sector-specific questions.",flag:"Tom and Steven need to consolidate their independent discovery content to avoid duplication.",tasks:[{task:"Tom: split discovery doc into initial scoping, detailed scoping, and sector-specific scoping",status:"Not Started"},{task:"Tom: use Certified Humane discovery transcript as AI input to enrich sector questions",status:"Not Started"},{task:"Steven: review Tom's discovery doc and provide inline feedback",status:"Not Started"},{task:"Upload finalised doc to SharePoint",status:"Not Started"}]},
+  {num:5,title:"Demo Execution",owner:"Steven + Tom",prio:"P1",status:"Not Started",notes:"Next priority after Discovery and Solution Design boundary is set. Intact AI (formerly Intact GPT) launching Q2 — demo script and visual assets needed urgently. Thomas/Jochen to re-run Intact AI pitch session (now set to auto-record).",flag:"Intact AI demo script and visual assets needed ahead of Q2 launch. Previous global sales meeting recording incomplete.",tasks:[{task:"Define standard vs. custom demo framework",status:"Not Started"},{task:"David: complete Intact AI demo script from Gong recordings (Thomas & Jochen sessions)",status:"In Progress"},{task:"David: secure Intact AI screenshots/mockups for demo",status:"Not Started"},{task:"Attend Intact AI re-pitch session with Thomas & Jochen (next week, auto-recorded)",status:"Not Started"}]},
+  {num:6,title:"Solution Design Phase",owner:"Stefan",prio:"P1",status:"In Progress",notes:"Stefan has 20+ page draft. Entry/exit triggers clearly defined: phase triggered after weekly pipeline review decision (AE + David/Armin/Brian). Two tracks: Solution Alignment Workshop (output: solution concept) or Paid Assessment (output: statement of work). Goal: 70-80% AI-assisted document generation using Claude. Deep-dive session held Mar 27 with Stefan K. — feedback to be incorporated. Compact version + checklists in progress.",flag:"Roles & responsibilities within the phase unresolved — decision required from David/Armin/Brian.",tasks:[{task:"Incorporate feedback from Mar 27 deep-dive session",status:"Not Started"},{task:"Compact 20+ page draft into checklist-driven version",status:"Not Started"},{task:"Define roles & responsibilities for each phase track",status:"In Progress"},{task:"Create assessment agenda template",status:"Not Started"},{task:"Create workshop preparation checklist template",status:"Not Started"},{task:"Build 70–80% AI-assisted doc generation workflow in Claude",status:"Not Started"},{task:"Align on demo/discovery boundary with Steven (Mon Mar 31 call)",status:"Not Started"}]},
+  {num:7,title:"Handling Technical Objections",owner:"David",prio:"P2",status:"Not Started",notes:"Prio 2. Not yet started.",flag:"",tasks:[{task:"Compile objection categories",status:"Not Started"},{task:"Define escalation paths to Product, Security, Legal",status:"Not Started"}]},
   {num:8,title:"Cross-Functional Collaboration",owner:"David",prio:"P2",status:"Not Started",notes:"No SE collaboration content exists yet.",flag:"No content exists — risk of indefinite deferral.",tasks:[{task:"Document AE/SE working rhythms",status:"Not Started"},{task:"Write guide to running internal Deal Board reviews as an SE",status:"Not Started"}]},
-  {num:9,title:"Commercial Awareness for SEs",owner:"David",prio:"P2",status:"Not Started",notes:"Prio 2.",flag:"",tasks:[{task:"Document ARR, TCV, licensing basics for SEs",status:"Not Started"},{task:"Write RFP partnering and build-vs-buy talking points",status:"Not Started"}]},
-  {num:10,title:"Core Tools & Resources",owner:"David",prio:"P1",status:"Collecting",notes:"David gathering resources. SharePoint cleanup needed.",flag:"SharePoint disorganisation is a team blocker.",tasks:[{task:"Build resource repository",status:"In Progress"},{task:"Clean up SharePoint",status:"Not Started"},{task:"Feed slide templates into Claude",status:"In Progress"}]},
-  {num:"11–13",title:"Performance, Scenarios & Appendices",owner:"David",prio:"P3",status:"Not Started",notes:"Prio 2–3.",flag:"No confirmed owner engagement.",tasks:[{task:"Draft performance expectations section",status:"Not Started"},{task:"Compile appendices A–I",status:"Not Started"}]},
+  {num:9,title:"Commercial Awareness for SEs",owner:"David",prio:"P2",status:"Not Started",notes:"Prio 2. Not yet started.",flag:"",tasks:[{task:"Document ARR, TCV, licensing basics for SEs",status:"Not Started"},{task:"Write RFP partnering and build-vs-buy talking points",status:"Not Started"}]},
+  {num:10,title:"Core Tools & Resources",owner:"David",prio:"P1",status:"Collecting",notes:"David gathering resources via bookmarks. Wants one consolidated repository covering presentations, IPLP links, SLAs, and scripts. SharePoint cleanup needed — two SharePoints merged with duplicates. Company switching fully to Claude (ChatGPT licenses expire in ~2-3 months). Slide templates to be fed into Claude for company-wide consistency.",flag:"SharePoint disorganisation is a team blocker. Connect page hard to navigate — SE team needs its own resource hub.",tasks:[{task:"Build resource repository (links, presentations, scripts, IPLP)",status:"In Progress"},{task:"Clean up SharePoint — resolve duplicate folders",status:"Not Started"},{task:"Feed slide templates into Claude for company-wide use",status:"In Progress"},{task:"Set up Teams channel with quick-access links",status:"Not Started"}]},
+  {num:"11–13",title:"Performance, Scenarios & Appendices",owner:"David",prio:"P3",status:"Not Started",notes:"Prio 2–3. Not yet started.",flag:"No confirmed owner engagement.",tasks:[{task:"Draft performance expectations section",status:"Not Started"},{task:"Compile appendices A–I",status:"Not Started"}]},
 ];
 const DEF_ACTIONS=[
-  {id:1,owner:"Steven",action:"Review Tom's discovery document and add inline feedback",due:"Mon Mar 30",dep:"",status:"Committed",type:"action"},
-  {id:2,owner:"Steven + Stefan",action:"30-min alignment call: agree on boundary between Demo/Discovery and Solution Design",due:"Mon Mar 30",dep:"Must happen before either section can be finalised",status:"Scheduled",type:"action"},
-  {id:3,owner:"Tom",action:"Split discovery document into three sections",due:"Next sprint",dep:"",status:"Committed",type:"action"},
-  {id:4,owner:"Stefan",action:"Continue Solution Design phase draft",due:"Next sprint",dep:"",status:"Committed",type:"action"},
-  {id:5,owner:"David",action:"Complete Intact AI demo script from Gong recordings",due:"This week",dep:"",status:"In Progress",type:"action"},
-  {id:6,owner:"David",action:"Build resource repository",due:"Next sprint",dep:"",status:"In Progress",type:"action"},
-  {id:7,owner:"David",action:"Clean up SharePoint",due:"Next sprint",dep:"",status:"Committed",type:"action"},
-  {id:8,owner:"All",action:"Align on company-wide AI tooling: standardise on Claude",due:"Before GPT license expiry",dep:"GPT licenses active ~2–3 more months",status:"Decision Needed",type:"action"},
-  {id:9,owner:"David",action:"Where exactly does the SE discovery/demo section end and Stefan's Solution Design phase begin?",due:"Mon Mar 30",dep:"",status:"Decision Needed",type:"question"},
-  {id:10,owner:"David",action:"Who has final approval authority on roles & responsibilities within the Solution Design phase?",due:"Next sprint",dep:"",status:"Decision Needed",type:"question"},
-  {id:11,owner:"David",action:"Is there a formal deadline for playbook v1.0, or is it delivery-driven by the Intact AI launch?",due:"Next sprint",dep:"",status:"Decision Needed",type:"question"},
+  {id:1,owner:"Steven",action:"Review Tom's discovery document and provide inline feedback",due:"Mon Mar 31",dep:"",status:"Committed",type:"action"},
+  {id:2,owner:"Steven + Stefan",action:"30-min alignment call: agree on boundary between Demo/Discovery and Solution Design",due:"Mon Mar 31",dep:"Must happen before Mon; Steven on vacation from Tue Apr 1 for ~2 weeks",status:"Scheduled",type:"action"},
+  {id:3,owner:"Tom",action:"Split discovery document into three sections: initial scoping, detailed scoping, sector-specific scoping",due:"Next sprint",dep:"",status:"Committed",type:"action"},
+  {id:4,owner:"Tom",action:"Use Certified Humane discovery transcript as AI input to enrich sector-specific discovery questions",due:"Next sprint",dep:"",status:"Committed",type:"action"},
+  {id:5,owner:"Stefan",action:"Incorporate feedback from Mar 27 deep-dive session into Solution Design playbook",due:"Next sprint",dep:"",status:"Committed",type:"action"},
+  {id:6,owner:"Stefan",action:"Compact 20+ page Solution Design draft into checklist-driven version",due:"Next sprint",dep:"",status:"Committed",type:"action"},
+  {id:7,owner:"Stefan",action:"Create assessment agenda template and workshop preparation checklist template",due:"Next sprint",dep:"",status:"Committed",type:"action"},
+  {id:8,owner:"David",action:"Complete Intact AI demo script from Gong recordings (Thomas & Jochen sessions)",due:"This week",dep:"",status:"In Progress",type:"action"},
+  {id:9,owner:"David",action:"Secure Intact AI screenshots/mockups for demo",due:"This week",dep:"Intact AI launching Q2",status:"Committed",type:"action"},
+  {id:10,owner:"David",action:"Build resource repository — consolidate presentations, IPLP links, SLAs, and scripts",due:"Next sprint",dep:"",status:"In Progress",type:"action"},
+  {id:11,owner:"David",action:"Clean up SharePoint — resolve duplicate folders",due:"Next sprint",dep:"",status:"Committed",type:"action"},
+  {id:12,owner:"David",action:"Feed slide templates into Claude for company-wide presentation consistency",due:"Next sprint",dep:"",status:"In Progress",type:"action"},
+  {id:13,owner:"All",action:"Transition from ChatGPT to Claude — company-wide switch confirmed, GPT licenses active ~2–3 more months",due:"Before GPT license expiry",dep:"Official announcement pending from David",status:"Decision Needed",type:"action"},
+  {id:14,owner:"David",action:"Attend Intact AI re-pitch session with Thomas & Jochen (invite updated to auto-record)",due:"Next week",dep:"Steven absent",status:"Scheduled",type:"action"},
+  {id:15,owner:"David",action:"Where exactly does Steven's Demo/Discovery section end and Stefan's Solution Design phase begin?",due:"Mon Mar 31",dep:"",status:"Decision Needed",type:"question"},
+  {id:16,owner:"David",action:"Who has final approval authority on roles & responsibilities within the Solution Design phase?",due:"Next sprint",dep:"",status:"Decision Needed",type:"question"},
+  {id:17,owner:"David",action:"Is there a formal deadline for playbook v1.0, or is it delivery-driven by the Intact AI Q2 launch?",due:"Next sprint",dep:"",status:"Decision Needed",type:"question"},
 ];
 
 // --- UI Primitives ---
@@ -719,7 +725,7 @@ function AdminPanel({cfg,setCfg,initiatives,setInitiatives}){
   </div>);}
 
 // --- Initiative View (main tabs) ---
-function InitiativeView({initiative,sections,setSections,actions,setActions,cfg,user,sync,onBack,onImport,showImport,setShowImport,onChangePw,onLogout}){
+function InitiativeView({initiative,sections,setSections,actions,setActions,cfg,setCfg,initiatives,setInitiatives,user,sync,onBack,onImport,showImport,setShowImport,onChangePw,onLogout}){
   const [tab,setTab]=useState(0);const isAdmin=user.role==="admin";
   const TABS=["Dashboard","Kanban","Project Plan","Action Items","My To-Dos",...(isAdmin?["⚙ Admin"]:[])];
   const ownerOpts=cfg.owners;
@@ -752,7 +758,7 @@ function InitiativeView({initiative,sections,setSections,actions,setActions,cfg,
     {tab===2&&<ProjectPlan sections={sections} setSections={setSections} cfg={cfg}/>}
     {tab===3&&<ActionItems actions={actions} setActions={setActions} cfg={cfg}/>}
     {tab===4&&<MyTodosWrapper user={user} cfg={cfg} currentIid={initiative.id} currentSections={sections} currentActions={actions} onCurrentUpdate={(ns,na)=>{setSections(ns);setActions(na);}}/>}
-    {tab===5&&isAdmin&&<AdminPanelWrapper cfg={cfg}/>}
+    {tab===5&&isAdmin&&<AdminPanelWrapper cfg={cfg} setCfg={setCfg} initiatives={initiatives} setInitiatives={setInitiatives}/>}
   </div>);}
 
 // Wrappers that load cross-initiative data for My To-Dos and pass admin through
@@ -766,7 +772,7 @@ function MyTodosWrapper({user,cfg,currentIid,currentSections,currentActions,onCu
   if(!allData)return <div style={{padding:"2rem",textAlign:"center"}}><Spinner/></div>;
   return <MyTodos user={user} allInitData={allData} cfg={cfg} onUpdate={handleUpdate}/>;
 }
-function AdminPanelWrapper({cfg}){return <div style={{padding:"1rem",background:"var(--bs)",borderRadius:8,fontSize:13,color:"var(--ts)"}}>Go to the initiatives screen to manage initiatives, users, and configuration.</div>;}
+function AdminPanelWrapper({cfg,setCfg,initiatives,setInitiatives}){return <AdminPanel cfg={cfg} setCfg={setCfg} initiatives={initiatives} setInitiatives={setInitiatives}/>;}
 
 // --- Root ---
 function App(){
@@ -828,7 +834,9 @@ function App(){
         {showChangePw&&<ChangePwModal user={user} onClose={changed=>{setShowChangePw(false);if(changed)logout();}}/>}
         <InitiativeView
           initiative={selectedInit} sections={sections} setSections={setSections}
-          actions={actions} setActions={setActions} cfg={cfg} user={user} sync={sync}
+          actions={actions} setActions={setActions} cfg={cfg} setCfg={setCfg}
+          initiatives={initiatives} setInitiatives={setInitiatives}
+          user={user} sync={sync}
           onBack={()=>setView("picker")} onImport={()=>setShowImport(true)}
           showImport={showImport} setShowImport={setShowImport}
           onChangePw={()=>setShowChangePw(true)} onLogout={logout}
