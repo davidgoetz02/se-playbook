@@ -3,22 +3,14 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>SE Playbook — Project Planning Tool</title>
+<title>SE Playbook Project Planner</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bp:#fff;--bs:#f5f5f3;--bt:#eeece6;
-  --tp:#1a1a18;--ts:#6b6b67;--tt:#9b9b96;
-  --bdt:rgba(0,0,0,0.12);--bds:rgba(0,0,0,0.22);--bdp:rgba(0,0,0,0.35);
-  --fn:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  --r:8px;--rl:12px;
-}
-@media(prefers-color-scheme:dark){
-  :root{--bp:#1e1e1c;--bs:#2a2a28;--bt:#333330;--tp:#f0ede6;--ts:#a0a09a;--tt:#6a6a64;--bdt:rgba(255,255,255,0.1);--bds:rgba(255,255,255,0.18);--bdp:rgba(255,255,255,0.28)}
-}
+:root{--bp:#fff;--bs:#f5f5f3;--bt:#eeece6;--tp:#1a1a18;--ts:#6b6b67;--tt:#9b9b96;--bdt:rgba(0,0,0,0.12);--bds:rgba(0,0,0,0.22);--bdp:rgba(0,0,0,0.35);--fn:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--r:8px;--rl:12px}
+@media(prefers-color-scheme:dark){:root{--bp:#1e1e1c;--bs:#2a2a28;--bt:#333330;--tp:#f0ede6;--ts:#a0a09a;--tt:#6a6a64;--bdt:rgba(255,255,255,0.1);--bds:rgba(255,255,255,0.18);--bdp:rgba(255,255,255,0.28)}}
 body{font-family:var(--fn);background:var(--bt);color:var(--tp);min-height:100vh}
 #root{max-width:1000px;margin:0 auto;padding:1.5rem 1rem}
 input,textarea,select{font-family:var(--fn);background:var(--bp);color:var(--tp);border:0.5px solid var(--bdt);border-radius:var(--r);padding:5px 9px;font-size:13px;outline:none;transition:border-color .15s}
@@ -57,24 +49,24 @@ textarea{resize:vertical;line-height:1.5}
 .change-item{padding:10px 14px;border-bottom:0.5px solid var(--bdt);font-size:13px;display:flex;gap:10px;align-items:flex-start}
 .change-item:last-child{border-bottom:none}
 .change-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;flex-shrink:0;margin-top:1px}
-/* Login */
 .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bt)}
 .login-box{background:var(--bp);border:0.5px solid var(--bds);border-radius:16px;padding:2rem;width:100%;max-width:380px}
-.login-box h1{font-size:20px;font-weight:500;margin-bottom:4px}
-.login-box p{font-size:13px;color:var(--ts);margin-bottom:1.5rem}
+.login-box h1{font-size:22px;font-weight:500;margin-bottom:4px}
+.login-box .sub{font-size:13px;color:var(--ts);margin-bottom:1.5rem}
 .form-group{margin-bottom:12px}
-.form-group label{display:block;font-size:12px;color:var(--ts);margin-bottom:4px}
+.form-group label{display:block;font-size:12px;color:var(--ts);margin-bottom:4px;font-weight:500}
 .form-group input,.form-group select{width:100%;padding:8px 10px}
-.err-msg{font-size:12px;color:#A32D2D;background:#FCEBEB;border-radius:6px;padding:6px 10px;margin-bottom:12px}
-/* Admin */
+.err-msg{font-size:12px;color:#A32D2D;background:#FCEBEB;border-radius:6px;padding:8px 10px;margin-bottom:12px}
+.ok-msg{font-size:12px;color:#3B6D11;background:#EAF3DE;border-radius:6px;padding:8px 10px;margin-bottom:12px}
 .admin-section{margin-bottom:1.5rem}
 .admin-section h3{font-size:14px;font-weight:500;margin-bottom:10px;padding-bottom:6px;border-bottom:0.5px solid var(--bdt)}
 .user-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--bdt);flex-wrap:wrap}
 .user-row:last-child{border-bottom:none}
 .tag-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .tag-item{display:flex;align-items:center;gap:4px;background:var(--bs);border:0.5px solid var(--bdt);border-radius:6px;padding:3px 8px;font-size:12px}
+.my-todo-row{background:var(--bp);border:0.5px solid var(--bdt);border-radius:8px;padding:.75rem 1rem;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px}
+.my-todo-row.done-row{opacity:.6}
 @keyframes spin{to{transform:rotate(360deg)}}
-.spin{width:32px;height:32px;border:3px solid var(--bds);border-top-color:#378ADD;border-radius:50%;animation:spin .8s linear infinite}
 @media(max-width:700px){.g4{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}.kb-board{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
@@ -82,48 +74,32 @@ textarea{resize:vertical;line-height:1.5}
 <div id="root"></div>
 <script type="text/babel">
 const {useState,useEffect,useRef,useCallback}=React;
-
 const SB="https://xashkjovtidhgmqmthvy.supabase.co";
 const SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhhc2hram92dGlkaGdtcW10aHZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MDA5MzQsImV4cCI6MjA5MDM3NjkzNH0.brfdv_UAXcok6VuM8-Hd7zCueg04dzFi-U4yyfQ8lJo";
 const HDR={apikey:SK,Authorization:`Bearer ${SK}`,"Content-Type":"application/json"};
-
-async function sbGet(table,filter=""){
-  const r=await fetch(`${SB}/rest/v1/${table}${filter?`?${filter}`:""}`,{headers:HDR});
-  return r.json();
-}
-async function sbPatch(table,filter,body){
-  await fetch(`${SB}/rest/v1/${table}?${filter}`,{method:"PATCH",headers:{...HDR,Prefer:"return=minimal"},body:JSON.stringify(body)});
-}
-async function sbPost(table,body){
-  const r=await fetch(`${SB}/rest/v1/${table}`,{method:"POST",headers:{...HDR,Prefer:"return=representation"},body:JSON.stringify(body)});
-  return r.json();
-}
-async function sbDelete(table,filter){
-  await fetch(`${SB}/rest/v1/${table}?${filter}`,{method:"DELETE",headers:HDR});
-}
-
-async function dbGetState(){const rows=await sbGet("playbook","id=eq.state&select=data");return rows?.[0]?.data||null;}
-async function dbSetState(data){await sbPatch("playbook","id=eq.state",{data,updated_at:new Date().toISOString()});}
+async function sbGet(t,f=""){const r=await fetch(`${SB}/rest/v1/${t}${f?`?${f}`:""}`,{headers:HDR});return r.json();}
+async function sbPatch(t,f,b){await fetch(`${SB}/rest/v1/${t}?${f}`,{method:"PATCH",headers:{...HDR,Prefer:"return=minimal"},body:JSON.stringify(b)});}
+async function sbPost(t,b){const r=await fetch(`${SB}/rest/v1/${t}`,{method:"POST",headers:{...HDR,Prefer:"return=representation"},body:JSON.stringify(b)});return r.json();}
+async function sbDel(t,f){await fetch(`${SB}/rest/v1/${t}?${f}`,{method:"DELETE",headers:HDR});}
+async function dbGetState(){const r=await sbGet("playbook","id=eq.state&select=data");return r?.[0]?.data||null;}
+async function dbSetState(d){await sbPatch("playbook","id=eq.state",{data:d,updated_at:new Date().toISOString()});}
 async function dbGetUsers(){return sbGet("playbook_users","select=username,role");}
 async function dbGetConfig(){return sbGet("playbook_config","select=key,value");}
-async function dbSetConfig(key,value){await sbPatch("playbook_config",`key=eq.${key}`,{value,updated_at:new Date().toISOString()});}
-async function dbAddUser(username,password,role){return sbPost("playbook_users",{username,password_hash:password,role});}
-async function dbDeleteUser(username){return sbDelete("playbook_users",`username=eq.${username}`);}
-async function dbUpdatePassword(username,pw){await sbPatch("playbook_users",`username=eq.${username}`,{password_hash:pw});}
-async function dbVerifyUser(username,password){
-  const rows=await sbGet("playbook_users",`username=eq.${encodeURIComponent(username)}&select=username,password_hash,role`);
-  if(!rows||rows.length===0)return null;
-  const u=rows[0];
-  if(u.password_hash!==password)return null;
-  return {username:u.username,role:u.role};
-}
+async function dbSetConfig(k,v){await sbPatch("playbook_config",`key=eq.${k}`,{value:v,updated_at:new Date().toISOString()});}
+async function dbAddUser(u,p,r){return sbPost("playbook_users",{username:u,password_hash:p,role:r});}
+async function dbDelUser(u){return sbDel("playbook_users",`username=eq.${u}`);}
+async function dbSetPw(u,p){await sbPatch("playbook_users",`username=eq.${u}`,{password_hash:p});}
+async function dbVerify(u,p){const r=await sbGet("playbook_users",`username=eq.${encodeURIComponent(u)}&select=username,password_hash,role`);if(!r||!r.length)return null;const x=r[0];return x.password_hash===p?{username:x.username,role:x.role}:null;}
+// For forgot password — admin can see all users with a recovery token field (we store a temp code)
+async function dbSetRecovery(u,code){await sbPatch("playbook_users",`username=eq.${u}`,{password_hash:`RESET:${code}`});}
+async function dbGetAllUsers(){return sbGet("playbook_users","select=username,password_hash,role");}
 
 const DEF_S=[
   {num:1,title:"Introduction",owner:"David",prio:"P1",status:"In Progress",notes:"Partial content drafted. To take over relevant content from Sales Playbook.",flag:"",tasks:[{task:"Draft purpose, scope, and relationship to Sales Playbook",status:"In Progress"},{task:"Define when to use the handbook",status:"In Progress"}]},
   {num:2,title:"SE Onboarding & Rollout Plan",owner:"David",prio:"P2",status:"Not Started",notes:"No documented progress.",flag:"Not started — not discussed in sprint review.",tasks:[{task:"Write 30/60/90/120/150 day ramp-up overview",status:"Not Started"},{task:"Define key milestones and KPIs",status:"Not Started"},{task:"Document internal systems & tools access",status:"Not Started"},{task:"Outline demo certification and shadowing process",status:"Not Started"}]},
   {num:3,title:"SE Role in the Sales Process",owner:"Steven",prio:"P1",status:"In Progress",notes:"Steven spent ~2hrs updating the outline. ~50% complete.",flag:"Boundary between Steven's section and Stefan's Solution Design phase must be agreed.",tasks:[{task:"Document SE responsibilities by stage",status:"In Progress"},{task:"Write SE vs. AE ownership (RACI)",status:"In Progress"},{task:"Define technical win criteria",status:"In Progress"},{task:"Align on AESE collaboration boundaries with Stefan",status:"Not Started"}]},
   {num:4,title:"Technical Discovery",owner:"Steven + Tom",prio:"P1",status:"In Cleanup",notes:"Tom has a 10-page Word doc. Needs restructuring into generic vs. detailed scoping.",flag:"",tasks:[{task:"Split discovery doc into generic + detailed + sector-specific sections",status:"Not Started"},{task:"Use Certified Humane transcript as additional AI input",status:"Not Started"},{task:"Steven: review Tom's discovery doc and add content",status:"Not Started"},{task:"Merge Steven's Word docs with Tom's discovery doc",status:"Not Started"},{task:"Upload finalised doc to SharePoint",status:"Not Started"}]},
-  {num:5,title:"Demo Execution",owner:"Steven + Tom",prio:"P1",status:"Not Started",notes:"Next priority after Discovery and Solution Design boundary is set.",flag:"Intact AI demo script and visual assets needed ahead of Q2 launch. David currently working on script.",tasks:[{task:"Define standard vs. custom demo framework",status:"Not Started"},{task:"David: draft demo narrative structure (Pain → Solution → Value)",status:"Not Started"},{task:"Compile one-liner objection responses (27 tracked in Gong)",status:"Not Started"},{task:"David: complete Intact AI demo script from Gong recordings",status:"In Progress"},{task:"David: secure Intact AI screenshots/mockups",status:"Not Started"}]},
+  {num:5,title:"Demo Execution",owner:"Steven + Tom",prio:"P1",status:"Not Started",notes:"Next priority after Discovery and Solution Design boundary is set.",flag:"Intact AI demo script and visual assets needed ahead of Q2 launch.",tasks:[{task:"Define standard vs. custom demo framework",status:"Not Started"},{task:"David: draft demo narrative structure (Pain → Solution → Value)",status:"Not Started"},{task:"Compile one-liner objection responses (27 tracked in Gong)",status:"Not Started"},{task:"David: complete Intact AI demo script from Gong recordings",status:"In Progress"},{task:"David: secure Intact AI screenshots/mockups",status:"Not Started"}]},
   {num:6,title:"Solution Design Phase",owner:"Stefan",prio:"P1",status:"In Progress",notes:"Stefan has 20+ page draft. Entry/exit triggers defined. Two output tracks: Solution Concept and SOW.",flag:"Roles & responsibilities within the phase unresolved — decision required from David/Armin/Brian.",tasks:[{task:"Finalise entry/exit trigger definition",status:"In Progress"},{task:"Clarify roles & responsibilities (decision needed)",status:"In Progress"},{task:"Incorporate feedback from morning deep-dive session",status:"Not Started"},{task:"Define two tracks — SAW vs. Assessment",status:"In Progress"},{task:"Create assessment agenda template",status:"Not Started"},{task:"Create workshop preparation checklist",status:"Not Started"},{task:"Compact 20+ page draft into checklist-driven version",status:"Not Started"},{task:"Align on demo/discovery boundary with Steven",status:"Not Started"},{task:"Build 70–80% AI-assisted doc generation workflow in Claude",status:"Not Started"}]},
   {num:7,title:"Handling Technical Objections",owner:"David",prio:"P2",status:"Not Started",notes:"Prio 2. David is responsible.",flag:"",tasks:[{task:"Compile objection categories: Security, Integrations, Data Residency, Performance",status:"Not Started"},{task:"Define escalation paths to Product, Security, Legal",status:"Not Started"},{task:"Draft competitive positioning tips and battlecard reference points",status:"Not Started"}]},
   {num:8,title:"Cross-Functional Collaboration",owner:"David",prio:"P2",status:"Not Started",notes:"No SE collaboration content exists yet.",flag:"No content exists — risk of indefinite deferral.",tasks:[{task:"Document AE/SE working rhythms, syncs, messaging alignment",status:"Not Started"},{task:"Describe collaboration with Product, Implementation, CS, Legal",status:"Not Started"},{task:"Write guide to running internal Deal Board reviews as an SE",status:"Not Started"}]},
@@ -132,236 +108,400 @@ const DEF_S=[
   {num:"11–13",title:"Performance, Scenarios & Appendices",owner:"David",prio:"P3",status:"Not Started",notes:"Prio 2–3. No discussion in sprint.",flag:"No confirmed owner engagement — risk of indefinite deferral.",tasks:[{task:"Draft performance expectations and career development section",status:"Not Started"},{task:"Write SE scenarios & playbooks (SMB vs. Enterprise)",status:"Not Started"},{task:"Compile appendices A–I",status:"Not Started"}]},
 ];
 const DEF_A=[
-  {id:1,owner:"Steven",action:"Review Tom's 10-page discovery document and add inline feedback + supplementary content",due:"Mon Mar 30",dep:"",status:"Committed",type:"action"},
+  {id:1,owner:"Steven",action:"Review Tom's 10-page discovery document and add inline feedback",due:"Mon Mar 30",dep:"",status:"Committed",type:"action"},
   {id:2,owner:"Steven + Stefan",action:"30-min alignment call: agree on boundary between Demo/Discovery and Solution Design",due:"Mon Mar 30",dep:"Must happen before either section can be finalised",status:"Scheduled",type:"action"},
   {id:3,owner:"Tom",action:"Split discovery document into three sections: generic, detailed, sector-specific scoping",due:"Next sprint",dep:"",status:"Committed",type:"action"},
   {id:4,owner:"Tom",action:"Use Certified Humane discovery transcript as AI input to enrich sector discovery questions",due:"Next sprint",dep:"",status:"Committed",type:"action"},
   {id:5,owner:"Tom",action:"Upload/link discovery document to SharePoint outline",due:"Mon Mar 30",dep:"",status:"Committed",type:"action"},
-  {id:6,owner:"Stefan",action:"Continue Solution Design phase draft: incorporate morning deep-dive feedback, refine entry/exit triggers",due:"Next sprint",dep:"",status:"Committed",type:"action"},
+  {id:6,owner:"Stefan",action:"Continue Solution Design phase draft: incorporate morning deep-dive feedback",due:"Next sprint",dep:"",status:"Committed",type:"action"},
   {id:7,owner:"Stefan",action:"Create/revise assessment agenda template and workshop preparation checklist",due:"Next sprint",dep:"",status:"Committed",type:"action"},
   {id:8,owner:"Stefan",action:"Compact 20+ page playbook into shorter, checklist-driven summary",due:"Next sprint",dep:"",status:"Committed",type:"action"},
-  {id:9,owner:"Stefan",action:"Build 70–80% AI-assisted doc generation workflow in Claude for Solution Concept and SOW",due:"Ongoing",dep:"Awaiting full Claude company rollout",status:"In Progress",type:"action"},
-  {id:10,owner:"David",action:"Complete Intact AI demo script from Gong recordings (Tom + Jochen client calls)",due:"This week",dep:"",status:"In Progress",type:"action"},
-  {id:11,owner:"David",action:"Secure Intact AI screenshots and UI mockups to use in SE demos (product launching Q2)",due:"This week",dep:"Coordinate with Tom/Jochen — not yet shareable",status:"Urgent",type:"action"},
+  {id:9,owner:"Stefan",action:"Build 70–80% AI-assisted doc generation workflow in Claude",due:"Ongoing",dep:"Awaiting full Claude company rollout",status:"In Progress",type:"action"},
+  {id:10,owner:"David",action:"Complete Intact AI demo script from Gong recordings",due:"This week",dep:"",status:"In Progress",type:"action"},
+  {id:11,owner:"David",action:"Secure Intact AI screenshots and UI mockups for SE demos (Q2 launch)",due:"This week",dep:"Coordinate with Tom/Jochen — not yet shareable",status:"Urgent",type:"action"},
   {id:12,owner:"David",action:"Build resource repository — compile all relevant presentations, templates, SLAs, IPLP links",due:"Next sprint",dep:"",status:"In Progress",type:"action"},
   {id:13,owner:"David",action:"Clean up SharePoint: remove duplicates, establish a clear folder structure",due:"Next sprint",dep:"",status:"Committed",type:"action"},
   {id:14,owner:"David",action:"Forward Global Sales Meeting invitation to Stefan",due:"Immediate",dep:"",status:"Committed",type:"action"},
   {id:15,owner:"David",action:"Feed company slide templates into Claude for consistent AI-generated presentations",due:"Ongoing",dep:"",status:"In Progress",type:"action"},
   {id:16,owner:"All",action:"Align on company-wide AI tooling: standardise on Claude — avoid building custom GPTs in ChatGPT",due:"Before GPT license expiry",dep:"GPT licenses active ~2–3 more months",status:"Decision Needed",type:"action"},
   {id:17,owner:"David",action:"Where exactly does the SE discovery/demo section end and Stefan's Solution Design phase begin?",due:"Mon Mar 30",dep:"",status:"Decision Needed",type:"question"},
-  {id:18,owner:"David",action:"What is the formal name for the SAW output document — 'Solution Concept' or 'Statement of Work Light'?",due:"Next sprint",dep:"",status:"Decision Needed",type:"question"},
+  {id:18,owner:"David",action:"What is the formal name for the SAW output document?",due:"Next sprint",dep:"",status:"Decision Needed",type:"question"},
   {id:19,owner:"David",action:"Who has final approval authority on roles & responsibilities within the Solution Design phase?",due:"Next sprint",dep:"",status:"Decision Needed",type:"question"},
   {id:20,owner:"David",action:"Is there a formal deadline for playbook v1.0, or is it delivery-driven by the Intact AI launch?",due:"Next sprint",dep:"",status:"Decision Needed",type:"question"},
   {id:21,owner:"David",action:"Will the playbook remain a Word/SharePoint document or migrate to another format?",due:"TBD",dep:"",status:"Decision Needed",type:"question"},
   {id:22,owner:"David",action:"How will Gong data (27 tracked demo objections) be formally integrated into Section 5?",due:"TBD",dep:"",status:"Decision Needed",type:"question"},
   {id:23,owner:"David",action:"When will the Intact AI presentation from the Global Sales Meeting be shareable for SE demo prep?",due:"TBD",dep:"",status:"Decision Needed",type:"question"},
 ];
+const DEF_CFG={statuses:["Not Started","Collecting","In Progress","In Cleanup","Done","Blocked"],priorities:["P1","P2","P3"],owners:["David","Steven","Stefan","Tom"],action_statuses:["Urgent","In Progress","Scheduled","Committed","Decision Needed","Done"]};
+const SS_F={Done:{bg:"#EAF3DE",text:"#3B6D11",border:"#97C459"},"In Progress":{bg:"#E6F1FB",text:"#185FA5",border:"#85B7EB"},"In Cleanup":{bg:"#FAEEDA",text:"#633806",border:"#EF9F27"},"Not Started":{bg:"#F1EFE8",text:"#5F5E5A",border:"#B4B2A9"},Blocked:{bg:"#FCEBEB",text:"#A32D2D",border:"#F09595"},Collecting:{bg:"#EEEDFE",text:"#3C3489",border:"#AFA9EC"}};
+const PS_F={P1:{bg:"#FCEBEB",text:"#A32D2D"},P2:{bg:"#FAEEDA",text:"#633806"},P3:{bg:"#F1EFE8",text:"#5F5E5A"}};
+const ASC_F={Urgent:"#A32D2D",Committed:"#185FA5",Scheduled:"#3B6D11","In Progress":"#0F6E56","Decision Needed":"#633806",Done:"#3B6D11"};
+const OCP=["#378ADD","#1D9E75","#7F77DD","#D85A30","#BA7517","#D4537E","#0F6E56","#633806"];
+const OC_B={David:"#378ADD",Steven:"#1D9E75",Stefan:"#7F77DD",Tom:"#D85A30"};
+function oc(n,owners){return OC_B[n]||(OCP[owners.indexOf(n)%OCP.length]||"#888");}
 
-const DEF_CFG={
-  statuses:["Not Started","Collecting","In Progress","In Cleanup","Done","Blocked"],
-  priorities:["P1","P2","P3"],
-  owners:["David","Steven","Stefan","Tom"],
-  action_statuses:["Urgent","In Progress","Scheduled","Committed","Decision Needed","Done"],
-};
-const SS_FIXED={Done:{bg:"#EAF3DE",text:"#3B6D11",border:"#97C459"},"In Progress":{bg:"#E6F1FB",text:"#185FA5",border:"#85B7EB"},"In Cleanup":{bg:"#FAEEDA",text:"#633806",border:"#EF9F27"},"Not Started":{bg:"#F1EFE8",text:"#5F5E5A",border:"#B4B2A9"},Blocked:{bg:"#FCEBEB",text:"#A32D2D",border:"#F09595"},Collecting:{bg:"#EEEDFE",text:"#3C3489",border:"#AFA9EC"}};
-const PS_FIXED={P1:{bg:"#FCEBEB",text:"#A32D2D"},P2:{bg:"#FAEEDA",text:"#633806"},P3:{bg:"#F1EFE8",text:"#5F5E5A"}};
-const ASC_FIXED={Urgent:"#A32D2D",Committed:"#185FA5",Scheduled:"#3B6D11","In Progress":"#0F6E56","Decision Needed":"#633806",Done:"#3B6D11"};
-const OC_BASE={David:"#378ADD",Steven:"#1D9E75",Stefan:"#7F77DD",Tom:"#D85A30"};
-const OC_POOL=["#378ADD","#1D9E75","#7F77DD","#D85A30","#BA7517","#D4537E","#0F6E56","#633806"];
-function ownerColor(name,owners){const idx=owners.indexOf(name);return OC_BASE[name]||(idx>=0?OC_POOL[idx%OC_POOL.length]:"#888");}
-
-// ---- UI Primitives ----
-function SPill({status,small}){const s=SS_FIXED[status]||SS_FIXED["Not Started"];return <span className="pill" style={{fontSize:small?11:12,background:s.bg,color:s.text,border:`1px solid ${s.border}`}}>{status}</span>;}
+// --- Primitives ---
+function SPill({status,small}){const s=SS_F[status]||SS_F["Not Started"];return <span className="pill" style={{fontSize:small?11:12,background:s.bg,color:s.text,border:`1px solid ${s.border}`}}>{status}</span>;}
 function Pill({label,bg,text}){return <span className="pill" style={{background:bg||"#eee",color:text||"#333"}}>{label}</span>;}
 function FlagB({text}){if(!text)return null;return <div className="flag-b"><span style={{flexShrink:0}}>⚑</span><span>{text}</span></div>;}
-function OTag({owner,owners}){
-  const parts=owner.split("+").map(p=>p.trim());
-  return <div className="owner-tags">{parts.map(p=>{const c=ownerColor(p,owners||[]);return <span key={p} className="pill" style={{fontSize:11,background:c+"18",border:`1px solid ${c}44`,color:c}}>{p}</span>;})}</div>;
-}
-function Sel({value,options,onChange,small,style={}}){return <select value={value} onChange={e=>onChange(e.target.value)} style={{fontSize:small?11:12,padding:"2px 4px",...style}}>{options.map(o=><option key={o}>{o}</option>)}</select>;}
-function Txt({value,onChange,multi,style={},placeholder=""}){const s={fontSize:13,width:"100%",lineHeight:1.5,...style};return multi?<textarea value={value} onChange={e=>onChange(e.target.value)} rows={2} style={s} placeholder={placeholder}/>:<input value={value} onChange={e=>onChange(e.target.value)} style={s} placeholder={placeholder}/>;}
+function OTag({owner,owners}){const parts=owner.split("+").map(p=>p.trim());return <div className="owner-tags">{parts.map(p=>{const c=oc(p,owners||[]);return <span key={p} className="pill" style={{fontSize:11,background:c+"18",border:`1px solid ${c}44`,color:c}}>{p}</span>;})}</div>;}
+function Sel({value,options,onChange,small,sty={}}){return <select value={value} onChange={e=>onChange(e.target.value)} style={{fontSize:small?11:12,padding:"2px 4px",...sty}}>{options.map(o=><option key={o}>{o}</option>)}</select>;}
+function Txt({value,onChange,multi,sty={},ph=""}){const s={fontSize:13,width:"100%",lineHeight:1.5,...sty};return multi?<textarea value={value} onChange={e=>onChange(e.target.value)} rows={2} style={s} placeholder={ph}/>:<input value={value} onChange={e=>onChange(e.target.value)} style={s} placeholder={ph}/>;}
 function SC({label,val,color}){return <div className="sc"><div style={{fontSize:12,color:"var(--ts)",marginBottom:4}}>{label}</div><div style={{fontSize:22,fontWeight:500,color:color||"var(--tp)"}}>{val}</div></div>;}
 function SyncDot({s}){const m={syncing:{c:"#EF9F27",t:"Syncing…"},saved:{c:"#1D9E75",t:"Saved ✓"},error:{c:"#A32D2D",t:"Sync failed"}};const x=m[s];if(!x)return null;return <span style={{fontSize:11,color:x.c,display:"flex",alignItems:"center",gap:5}}><span style={{width:7,height:7,borderRadius:"50%",background:x.c,display:"inline-block"}}/>{x.t}</span>;}
 function Spinner({size=32}){return <div style={{width:size,height:size,border:"3px solid var(--bds)",borderTopColor:"#378ADD",borderRadius:"50%",animation:"spin .8s linear infinite"}}/>;}
 
-// ---- Login Screen ----
+// --- Login ---
 function LoginScreen({onLogin}){
-  const [username,setUsername]=useState("");
-  const [password,setPassword]=useState("");
+  const [view,setView]=useState("login"); // login | forgot | reset
+  const [uname,setUname]=useState("");
+  const [pw,setPw]=useState("");
+  const [newPw,setNewPw]=useState("");
+  const [confirmPw,setConfirmPw]=useState("");
+  const [resetCode,setResetCode]=useState("");
+  const [generatedCode,setGeneratedCode]=useState("");
   const [err,setErr]=useState("");
+  const [ok,setOk]=useState("");
   const [loading,setLoading]=useState(false);
-  async function submit(e){
-    e.preventDefault();
-    if(!username||!password){setErr("Please enter your name and password.");return;}
+
+  async function login(e){
+    e.preventDefault();if(!uname||!pw){setErr("Please enter your name and password.");return;}
     setLoading(true);setErr("");
-    const user=await dbVerifyUser(username,password);
+    const user=await dbVerify(uname,pw);
     setLoading(false);
     if(!user){setErr("Incorrect name or password. Please try again.");return;}
     sessionStorage.setItem("sep_user",JSON.stringify(user));
     onLogin(user);
   }
+
+  async function requestReset(e){
+    e.preventDefault();if(!uname){setErr("Please enter your name.");return;}
+    setLoading(true);setErr("");
+    const rows=await sbGet("playbook_users",`username=eq.${encodeURIComponent(uname)}&select=username`);
+    setLoading(false);
+    if(!rows||!rows.length){setErr("No account found with that name.");return;}
+    const code=Math.floor(100000+Math.random()*900000).toString();
+    await dbSetRecovery(uname,code);
+    setGeneratedCode(code);
+    setOk("");
+    setView("reset");
+  }
+
+  async function doReset(e){
+    e.preventDefault();
+    if(!resetCode){setErr("Please enter the reset code from your admin.");return;}
+    if(newPw.length<6){setErr("New password must be at least 6 characters.");return;}
+    if(newPw!==confirmPw){setErr("Passwords do not match.");return;}
+    setLoading(true);setErr("");
+    const rows=await sbGet("playbook_users",`username=eq.${encodeURIComponent(uname)}&select=username,password_hash`);
+    setLoading(false);
+    if(!rows||!rows.length){setErr("User not found.");return;}
+    const stored=rows[0].password_hash;
+    if(stored!==`RESET:${resetCode}`){setErr("Incorrect reset code. Please ask your admin for the code.");return;}
+    await dbSetPw(uname,newPw);
+    setOk("Password reset successfully! You can now sign in.");
+    setView("login");setPw("");setResetCode("");setNewPw("");setConfirmPw("");
+  }
+
   return(
     <div className="login-wrap">
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <div className="login-box">
         <h1>SE Playbook</h1>
-        <p>Intact Solution Engineering · Sign in to continue</p>
-        {err&&<div className="err-msg">{err}</div>}
-        <form onSubmit={submit}>
-          <div className="form-group">
-            <label>Your name</label>
-            <input value={username} onChange={e=>setUsername(e.target.value)} placeholder="e.g. David" autoFocus/>
+        <p className="sub">Project Planner · Intact Solution Engineering</p>
+
+        {view==="login"&&<>
+          {err&&<div className="err-msg">{err}</div>}
+          {ok&&<div className="ok-msg">{ok}</div>}
+          <form onSubmit={login}>
+            <div className="form-group"><label>Your name</label><input value={uname} onChange={e=>setUname(e.target.value)} placeholder="e.g. David" autoFocus/></div>
+            <div className="form-group"><label>Password</label><input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="Enter your password"/></div>
+            <button type="submit" className="btn-p" style={{width:"100%",marginTop:8}} disabled={loading}>{loading?"Signing in…":"Sign in →"}</button>
+          </form>
+          <div style={{textAlign:"center",marginTop:14}}>
+            <button onClick={()=>{setView("forgot");setErr("");setOk("");}} style={{background:"none",border:"none",fontSize:12,color:"var(--ts)",textDecoration:"underline",cursor:"pointer"}}>Forgot password?</button>
           </div>
-          <div className="form-group">
-            <label>Password</label>
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Enter your password"/>
-          </div>
-          <button type="submit" className="btn-p" style={{width:"100%",marginTop:8}} disabled={loading}>
-            {loading?"Signing in…":"Sign in →"}
-          </button>
-        </form>
+        </>}
+
+        {view==="forgot"&&<>
+          <div style={{marginBottom:12}}><button onClick={()=>{setView("login");setErr("");}} style={{background:"none",border:"none",fontSize:12,color:"var(--ts)",cursor:"pointer"}}>← Back to sign in</button></div>
+          <p style={{marginBottom:14}}>Enter your name and we'll generate a reset code. You'll need to share this code with your admin (David) who can pass it to you.</p>
+          {err&&<div className="err-msg">{err}</div>}
+          <form onSubmit={requestReset}>
+            <div className="form-group"><label>Your name</label><input value={uname} onChange={e=>setUname(e.target.value)} placeholder="e.g. Steven" autoFocus/></div>
+            <button type="submit" className="btn-p" style={{width:"100%"}} disabled={loading}>{loading?"Generating…":"Generate reset code"}</button>
+          </form>
+        </>}
+
+        {view==="reset"&&<>
+          <div style={{marginBottom:12}}><button onClick={()=>{setView("login");setErr("");}} style={{background:"none",border:"none",fontSize:12,color:"var(--ts)",cursor:"pointer"}}>← Back to sign in</button></div>
+          {generatedCode&&<div style={{background:"#FAEEDA",border:"1px solid #EF9F27",borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:13,color:"#633806"}}>
+            <div style={{fontWeight:500,marginBottom:4}}>Reset code generated</div>
+            <div>Your reset code is: <strong style={{fontSize:16,letterSpacing:2}}>{generatedCode}</strong></div>
+            <div style={{fontSize:11,marginTop:4,color:"#854F0B"}}>Share this with {uname} — they'll need it to set a new password. This code is single-use.</div>
+          </div>}
+          {err&&<div className="err-msg">{err}</div>}
+          <form onSubmit={doReset}>
+            <div className="form-group"><label>Reset code (from admin)</label><input value={resetCode} onChange={e=>setResetCode(e.target.value)} placeholder="6-digit code"/></div>
+            <div className="form-group"><label>New password</label><input type="password" value={newPw} onChange={e=>setNewPw(e.target.value)} placeholder="At least 6 characters"/></div>
+            <div className="form-group"><label>Confirm new password</label><input type="password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)} placeholder="Repeat new password"/></div>
+            <button type="submit" className="btn-p" style={{width:"100%"}} disabled={loading}>{loading?"Resetting…":"Reset password"}</button>
+          </form>
+        </>}
       </div>
     </div>
   );
 }
 
-// ---- Admin Panel ----
-function AdminPanel({cfg,setCfg,onCfgSave}){
+// --- Change Password Modal ---
+function ChangePwModal({user,onClose}){
+  const [cur,setCur]=useState("");
+  const [nw,setNw]=useState("");
+  const [conf,setConf]=useState("");
+  const [err,setErr]=useState("");
+  const [ok,setOk]=useState(false);
+  const [loading,setLoading]=useState(false);
+  async function submit(e){
+    e.preventDefault();
+    if(!cur||!nw||!conf){setErr("Please fill in all fields.");return;}
+    if(nw.length<6){setErr("New password must be at least 6 characters.");return;}
+    if(nw!==conf){setErr("New passwords do not match.");return;}
+    setLoading(true);setErr("");
+    const verified=await dbVerify(user.username,cur);
+    if(!verified){setLoading(false);setErr("Current password is incorrect.");return;}
+    await dbSetPw(user.username,nw);
+    setLoading(false);setOk(true);
+    const updated={...user};
+    sessionStorage.setItem("sep_user",JSON.stringify(updated));
+    setTimeout(()=>onClose(true),1500);
+  }
+  return(
+    <div className="modal-bg" onClick={e=>{if(e.target===e.currentTarget)onClose(false);}}>
+      <div className="modal" style={{maxWidth:400}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <h2 style={{marginBottom:0}}>Change password</h2>
+          <button onClick={()=>onClose(false)} style={{background:"none",border:"none",fontSize:20,color:"var(--tt)",lineHeight:1}}>×</button>
+        </div>
+        {ok?<div className="ok-msg">Password changed successfully!</div>:<>
+          {err&&<div className="err-msg">{err}</div>}
+          <form onSubmit={submit}>
+            <div className="form-group"><label>Current password</label><input type="password" value={cur} onChange={e=>setCur(e.target.value)} autoFocus/></div>
+            <div className="form-group"><label>New password</label><input type="password" value={nw} onChange={e=>setNw(e.target.value)} placeholder="At least 6 characters"/></div>
+            <div className="form-group"><label>Confirm new password</label><input type="password" value={conf} onChange={e=>setConf(e.target.value)}/></div>
+            <div className="btn-row"><button type="button" className="btn-s" onClick={()=>onClose(false)}>Cancel</button><button type="submit" className="btn-p" disabled={loading}>{loading?"Saving…":"Save password"}</button></div>
+          </form>
+        </>}
+      </div>
+    </div>
+  );
+}
+
+// --- My To-Dos ---
+function MyTodos({user,sections,actions,setSections,setActions,cfg}){
+  const {owners,statuses,action_statuses}=cfg;
+  const name=user.username;
+
+  // Tasks from sections where owner includes this user
+  const myTasks=sections.flatMap((s,si)=>
+    s.tasks.map((t,ti)=>({...t,sectionTitle:s.title,sectionNum:s.num,si,ti,source:"task"}))
+  ).filter(t=>sections[t.si].owner.split("+").map(o=>o.trim()).includes(name));
+
+  // Action items assigned to this user
+  const myActions=actions.filter(a=>a.type==="action"&&a.owner.split("+").map(o=>o.trim()).includes(name));
+
+  const openTasks=myTasks.filter(t=>t.status!=="Done");
+  const doneTasks=myTasks.filter(t=>t.status==="Done");
+  const openActions=myActions.filter(a=>a.status!=="Done");
+  const doneActions=myActions.filter(a=>a.status==="Done");
+  const col=oc(name,owners);
+
+  function markTask(si,ti,status){
+    const n=[...sections];const t=[...n[si].tasks];t[ti]={...t[ti],status};n[si]={...n[si],tasks:t};setSections(n);
+  }
+  function markAction(id,status){setActions(prev=>prev.map(a=>a.id===id?{...a,status}:a));}
+
+  return(
+    <div>
+      <div style={{background:`${col}12`,border:`1px solid ${col}33`,borderRadius:12,padding:"1rem 1.25rem",marginBottom:"1.25rem",display:"flex",alignItems:"center",gap:12}}>
+        <div style={{width:40,height:40,borderRadius:"50%",background:col+"22",border:`2px solid ${col}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,fontWeight:700,color:col,flexShrink:0}}>{name[0]}</div>
+        <div>
+          <div style={{fontSize:15,fontWeight:500}}>{name}'s to-dos</div>
+          <div style={{fontSize:12,color:"var(--ts)"}}>{openTasks.length+openActions.length} open · {doneTasks.length+doneActions.length} done</div>
+        </div>
+      </div>
+
+      <div className="g4" style={{marginBottom:"1.25rem"}}>
+        <SC label="Open tasks" val={openTasks.length} color={col}/>
+        <SC label="Open actions" val={openActions.length} color="#633806"/>
+        <SC label="Tasks done" val={doneTasks.length} color="#3B6D11"/>
+        <SC label="Actions done" val={doneActions.length} color="#3B6D11"/>
+      </div>
+
+      {/* Open tasks */}
+      {openTasks.length>0&&<>
+        <div style={{fontSize:13,fontWeight:500,marginBottom:8,color:"var(--tp)"}}>Open tasks</div>
+        {openTasks.map((t,i)=>(
+          <div key={i} className="my-todo-row">
+            <div style={{paddingTop:2}}>
+              <input type="checkbox" checked={false} onChange={()=>markTask(t.si,t.ti,"Done")} style={{width:15,height:15,cursor:"pointer",accentColor:col}}/>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,lineHeight:1.4,marginBottom:4}}>{t.task}</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                <SPill status={t.status} small/>
+                <span style={{fontSize:11,color:"var(--tt)"}}>§{t.sectionNum} {t.sectionTitle}</span>
+              </div>
+            </div>
+            <Sel value={t.status} options={statuses} onChange={v=>markTask(t.si,t.ti,v)} small/>
+          </div>
+        ))}
+      </>}
+
+      {/* Open actions */}
+      {openActions.length>0&&<>
+        <div style={{fontSize:13,fontWeight:500,margin:"1rem 0 8px",color:"var(--tp)"}}>Open action items</div>
+        {openActions.map(a=>(
+          <div key={a.id} className="my-todo-row" style={{border:`0.5px solid ${a.status==="Urgent"?"#F09595":"var(--bdt)"}`}}>
+            <div style={{paddingTop:2}}>
+              <input type="checkbox" checked={false} onChange={()=>markAction(a.id,"Done")} style={{width:15,height:15,cursor:"pointer",accentColor:col}}/>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,lineHeight:1.4,marginBottom:4}}>{a.action}</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                <span className="pill" style={{fontSize:11,background:(ASC_F[a.status]||"#888")+"22",color:ASC_F[a.status]||"#888"}}>{a.status}</span>
+                <span style={{fontSize:11,color:"var(--tt)"}}>Due: {a.due}</span>
+                {a.dep&&<span style={{fontSize:11,color:"#633806",background:"#FAEEDA",borderRadius:4,padding:"1px 6px"}}>◆ {a.dep}</span>}
+              </div>
+            </div>
+            <Sel value={a.status} options={action_statuses} onChange={v=>markAction(a.id,v)} small/>
+          </div>
+        ))}
+      </>}
+
+      {openTasks.length===0&&openActions.length===0&&(
+        <div className="card" style={{textAlign:"center",padding:"2rem",color:"var(--ts)"}}>
+          <div style={{fontSize:32,marginBottom:8}}>🎉</div>
+          <div style={{fontSize:14,fontWeight:500,marginBottom:4}}>All caught up!</div>
+          <div style={{fontSize:13}}>No open tasks or action items assigned to you.</div>
+        </div>
+      )}
+
+      {/* Done (collapsed) */}
+      {(doneTasks.length+doneActions.length)>0&&<>
+        <div style={{fontSize:13,fontWeight:500,margin:"1rem 0 8px",color:"var(--ts)"}}>Completed ({doneTasks.length+doneActions.length})</div>
+        {[...doneTasks.map(t=>({label:t.task,sub:`§${t.sectionNum} ${t.sectionTitle}`,key:`t${t.si}${t.ti}`})),...doneActions.map(a=>({label:a.action,sub:`Due: ${a.due}`,key:`a${a.id}`}))].map(x=>(
+          <div key={x.key} className="my-todo-row done-row">
+            <div style={{paddingTop:2}}><input type="checkbox" checked disabled style={{width:15,height:15,accentColor:col}}/></div>
+            <div style={{flex:1}}><div style={{fontSize:13,textDecoration:"line-through",color:"var(--ts)"}}>{x.label}</div><div style={{fontSize:11,color:"var(--tt)"}}>{x.sub}</div></div>
+          </div>
+        ))}
+      </>}
+    </div>
+  );
+}
+
+// --- Admin Panel ---
+function AdminPanel({cfg,setCfg}){
   const [users,setUsers]=useState([]);
-  const [loadingUsers,setLoadingUsers]=useState(true);
+  const [loading,setLoading]=useState(true);
   const [newUser,setNewUser]=useState({username:"",password:"",role:"member"});
   const [newPw,setNewPw]=useState({});
-  const [msg,setMsg]=useState("");
-  const [localCfg,setLocalCfg]=useState(cfg);
-  const [addStatus,setAddStatus]=useState("");
-  const [addPrio,setAddPrio]=useState("");
-  const [addOwner,setAddOwner]=useState("");
-  const [addActionStatus,setAddActionStatus]=useState("");
+  const [msg,setMsg]=useState({text:"",type:"ok"});
+  const [lc,setLc]=useState(cfg);
+  const [addVals,setAddVals]=useState({statuses:"",priorities:"",owners:"",action_statuses:""});
 
-  useEffect(()=>{
-    dbGetUsers().then(u=>{setUsers(u||[]);setLoadingUsers(false);});
-  },[]);
-
-  function flash(m){setMsg(m);setTimeout(()=>setMsg(""),3000);}
+  useEffect(()=>{dbGetUsers().then(u=>{setUsers(u||[]);setLoading(false);});},[]);
+  function flash(text,type="ok"){setMsg({text,type});setTimeout(()=>setMsg({text:"",type:"ok"}),3500);}
 
   async function addUser(){
-    if(!newUser.username||!newUser.password){flash("Please fill in name and password.");return;}
+    if(!newUser.username||!newUser.password){flash("Please fill in name and password.","err");return;}
     await dbAddUser(newUser.username,newUser.password,newUser.role);
     const u=await dbGetUsers();setUsers(u||[]);
     setNewUser({username:"",password:"",role:"member"});
     flash(`User "${newUser.username}" added.`);
   }
-  async function deleteUser(username){
-    if(!confirm(`Remove user "${username}"? They will no longer be able to log in.`))return;
-    await dbDeleteUser(username);
-    const u=await dbGetUsers();setUsers(u||[]);
-    flash(`User "${username}" removed.`);
+  async function delUser(u){
+    if(!confirm(`Remove user "${u}"? They will no longer be able to log in.`))return;
+    await dbDelUser(u);const us=await dbGetUsers();setUsers(us||[]);flash(`User "${u}" removed.`);
   }
-  async function updatePw(username){
-    const pw=newPw[username];if(!pw){return;}
-    await dbUpdatePassword(username,pw);
-    setNewPw(p=>({...p,[username]:""}));
-    flash(`Password updated for "${username}".`);
+  async function updPw(u){
+    const p=newPw[u];if(!p||p.length<1)return;
+    await dbSetPw(u,p);setNewPw(prev=>({...prev,[u]:""}));flash(`Password updated for "${u}".`);
   }
-
   async function saveCfg(){
-    await Promise.all([
-      dbSetConfig("statuses",localCfg.statuses),
-      dbSetConfig("priorities",localCfg.priorities),
-      dbSetConfig("owners",localCfg.owners),
-      dbSetConfig("action_statuses",localCfg.action_statuses),
-    ]);
-    setCfg(localCfg);onCfgSave(localCfg);
-    flash("Configuration saved and applied.");
+    await Promise.all(Object.keys(lc).map(k=>dbSetConfig(k,lc[k])));
+    setCfg(lc);flash("Configuration saved and applied to all users.");
   }
-
-  function addToList(key,val,setVal){
-    if(!val.trim())return;
-    setLocalCfg(c=>({...c,[key]:[...c[key],val.trim()]}));
-    setVal("");
+  function addToList(key){
+    const v=addVals[key].trim();if(!v)return;
+    setLc(c=>({...c,[key]:[...c[key],v]}));
+    setAddVals(p=>({...p,[key]:""}));
   }
-  function removeFromList(key,idx){setLocalCfg(c=>({...c,[key]:c[key].filter((_,i)=>i!==idx)}));}
+  function rmFromList(key,i){setLc(c=>({...c,[key]:c[key].filter((_,j)=>j!==i)}));}
 
   return(
     <div>
-      <div style={{background:"#FAEEDA",border:"1px solid #EF9F27",borderRadius:8,padding:"8px 12px",marginBottom:"1.25rem",fontSize:12,color:"#633806"}}>
-        🔒 Admin panel — visible only to you. Changes to users and configuration apply immediately for all team members.
-      </div>
-      {msg&&<div style={{background:"#EAF3DE",border:"1px solid #97C459",borderRadius:8,padding:"8px 12px",marginBottom:"1rem",fontSize:12,color:"#3B6D11"}}>✓ {msg}</div>}
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <div style={{background:"#FAEEDA",border:"1px solid #EF9F27",borderRadius:8,padding:"8px 12px",marginBottom:"1.25rem",fontSize:12,color:"#633806"}}>🔒 Admin panel — visible only to admins.</div>
+      {msg.text&&<div className={msg.type==="err"?"err-msg":"ok-msg"}>{msg.text}</div>}
 
-      {/* Users */}
       <div className="admin-section">
         <h3>Team members</h3>
-        {loadingUsers?<Spinner size={24}/>:(
-          <div>
-            {users.map(u=>(
-              <div key={u.username} className="user-row">
-                <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:120}}>
-                  <div style={{width:28,height:28,borderRadius:"50%",background:ownerColor(u.username,users.map(x=>x.username))+"22",border:`1.5px solid ${ownerColor(u.username,users.map(x=>x.username))}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,color:ownerColor(u.username,users.map(x=>x.username))}}>{u.username[0]}</div>
-                  <span style={{fontSize:13,fontWeight:500}}>{u.username}</span>
-                  <span className="pill" style={{fontSize:10,background:u.role==="admin"?"#FAEEDA":"#F1EFE8",color:u.role==="admin"?"#633806":"#5F5E5A"}}>{u.role}</span>
-                </div>
-                <input type="password" value={newPw[u.username]||""} onChange={e=>setNewPw(p=>({...p,[u.username]:e.target.value}))} placeholder="New password" style={{width:140,fontSize:12}}/>
-                <button className="btn-p" style={{fontSize:11,padding:"4px 10px"}} onClick={()=>updatePw(u.username)}>Update</button>
-                {u.role!=="admin"&&<button className="btn-d" onClick={()=>deleteUser(u.username)}>Remove</button>}
-              </div>
-            ))}
+        {loading?<Spinner size={24}/>:users.map(u=>(
+          <div key={u.username} className="user-row">
+            <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:120}}>
+              <div style={{width:28,height:28,borderRadius:"50%",background:oc(u.username,[])+"22",border:`1.5px solid ${oc(u.username,[])}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,color:oc(u.username,[])}}>{u.username[0]}</div>
+              <span style={{fontSize:13,fontWeight:500}}>{u.username}</span>
+              <span className="pill" style={{fontSize:10,background:u.role==="admin"?"#FAEEDA":"#F1EFE8",color:u.role==="admin"?"#633806":"#5F5E5A"}}>{u.role}</span>
+            </div>
+            <input type="password" value={newPw[u.username]||""} onChange={e=>setNewPw(p=>({...p,[u.username]:e.target.value}))} placeholder="New password" style={{width:140,fontSize:12}}/>
+            <button className="btn-p" style={{fontSize:11,padding:"4px 10px"}} onClick={()=>updPw(u.username)}>Update</button>
+            {u.role!=="admin"&&<button className="btn-d" onClick={()=>delUser(u.username)}>Remove</button>}
           </div>
-        )}
-        <div style={{marginTop:14,padding:"12px",background:"var(--bs)",borderRadius:8}}>
+        ))}
+        <div style={{marginTop:14,padding:12,background:"var(--bs)",borderRadius:8}}>
           <div style={{fontSize:12,fontWeight:500,marginBottom:8}}>Add new user</div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <input value={newUser.username} onChange={e=>setNewUser(p=>({...p,username:e.target.value}))} placeholder="Name" style={{flex:1,minWidth:100,fontSize:12}}/>
             <input type="password" value={newUser.password} onChange={e=>setNewUser(p=>({...p,password:e.target.value}))} placeholder="Password" style={{flex:1,minWidth:100,fontSize:12}}/>
             <Sel value={newUser.role} options={["member","admin"]} onChange={v=>setNewUser(p=>({...p,role:v}))} small/>
-            <button className="btn-p" style={{fontSize:12,padding:"5px 14px"}} onClick={addUser}>Add user</button>
+            <button className="btn-p" style={{fontSize:12,padding:"5px 14px"}} onClick={addUser}>Add</button>
           </div>
         </div>
       </div>
 
-      {/* Config */}
       <div className="admin-section">
         <h3>Configuration</h3>
-        {[
-          {key:"statuses",label:"Section statuses",addVal:addStatus,setAdd:setAddStatus},
-          {key:"priorities",label:"Priority levels",addVal:addPrio,setAdd:setAddPrio},
-          {key:"owners",label:"Owner dropdown options",addVal:addOwner,setAdd:setAddOwner},
-          {key:"action_statuses",label:"Action item statuses",addVal:addActionStatus,setAdd:setAddActionStatus},
-        ].map(({key,label,addVal,setAdd})=>(
+        {[{key:"statuses",label:"Section statuses"},{key:"priorities",label:"Priority levels"},{key:"owners",label:"Owner options"},{key:"action_statuses",label:"Action item statuses"}].map(({key,label})=>(
           <div key={key} style={{marginBottom:16}}>
             <div style={{fontSize:12,color:"var(--ts)",marginBottom:6}}>{label}</div>
             <div className="tag-row" style={{marginBottom:6}}>
-              {localCfg[key].map((v,i)=>(
-                <div key={i} className="tag-item">
-                  <span>{v}</span>
-                  <button onClick={()=>removeFromList(key,i)} style={{background:"none",border:"none",color:"#A32D2D",fontSize:14,lineHeight:1,padding:0}}>×</button>
-                </div>
+              {lc[key].map((v,i)=>(
+                <div key={i} className="tag-item"><span>{v}</span><button onClick={()=>rmFromList(key,i)} style={{background:"none",border:"none",color:"#A32D2D",fontSize:14,lineHeight:1,padding:0}}>×</button></div>
               ))}
             </div>
             <div style={{display:"flex",gap:6}}>
-              <input value={addVal} onChange={e=>setAdd(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addToList(key,addVal,setAdd)} placeholder={`Add ${label.toLowerCase()}…`} style={{fontSize:12,flex:1}}/>
-              <button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>addToList(key,addVal,setAdd)}>Add</button>
+              <input value={addVals[key]} onChange={e=>setAddVals(p=>({...p,[key]:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&addToList(key)} placeholder={`Add new ${label.toLowerCase()}…`} style={{fontSize:12,flex:1}}/>
+              <button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>addToList(key)}>Add</button>
             </div>
           </div>
         ))}
-        <button className="btn-p" onClick={saveCfg} style={{marginTop:4}}>Save configuration</button>
+        <button className="btn-p" onClick={saveCfg}>Save configuration</button>
       </div>
     </div>
   );
 }
 
-// ---- Sprint Import Modal ----
-const AI_SYS=`You are a project management assistant for the Intact SE Playbook initiative.
-You will receive the current state of a project planning tool (sections and action items) and a sprint review transcript.
-Analyse the transcript carefully and return ONLY a valid JSON object with this exact structure — no markdown, no explanation:
-{"summary":"2-3 sentence plain English summary of what changed this sprint","sectionUpdates":[{"num":"<section number, use string for 11–13>","changes":{"status":"<new status if changed, else omit>","flag":"<new flag text if changed, empty string to clear, else omit>","notes":"<appended note if new context emerged, else omit>","tasksToAdd":[{"task":"<text>","status":"Not Started"}],"tasksToComplete":["<exact task text to mark Done>"],"tasksToUpdate":[{"task":"<exact existing task text>","newStatus":"<status>"}]}}],"actionsToComplete":[<id numbers of actions mentioned as done>],"actionsToAdd":[{"owner":"<name>","action":"<text>","due":"<date>","dep":"<dependency or empty>","status":"Committed","type":"action"}],"questionsToResolve":[<id numbers of questions that were answered>],"questionsToAdd":[{"owner":"<name>","action":"<question text>","due":"TBD","dep":"","status":"Decision Needed","type":"question"}]}
-Rules: only include fields that actually changed; only mark things Done if explicitly stated as completed; be conservative; return ONLY the JSON.`;
+// --- Sprint Import Modal ---
+const AI_SYS=`You are a project management assistant for the Intact SE Playbook initiative. You will receive the current state of a project planning tool and a sprint review transcript. Analyse the transcript carefully and return ONLY a valid JSON object — no markdown, no explanation:
+{"summary":"2-3 sentence summary of what changed","sectionUpdates":[{"num":"<num>","changes":{"status":"<if changed>","flag":"<if changed, empty to clear>","notes":"<if new context>","tasksToAdd":[{"task":"<text>","status":"Not Started"}],"tasksToComplete":["<exact task text>"],"tasksToUpdate":[{"task":"<exact text>","newStatus":"<status>"}]}}],"actionsToComplete":[<ids>],"actionsToAdd":[{"owner":"<n>","action":"<text>","due":"<date>","dep":"","status":"Committed","type":"action"}],"questionsToResolve":[<ids>],"questionsToAdd":[{"owner":"<n>","action":"<question>","due":"TBD","dep":"","status":"Decision Needed","type":"question"}]}
+Rules: only include changed fields; only mark Done if explicitly stated; return ONLY the JSON.`;
 
 function SprintModal({sections,actions,owners,onApply,onClose}){
   const [text,setText]=useState("");
   const [stage,setStage]=useState("input");
   const [diff,setDiff]=useState(null);
   const [err,setErr]=useState("");
-
   async function analyse(){
     if(!text.trim()){setErr("Please paste the transcript first.");return;}
     setErr("");setStage("thinking");
@@ -374,15 +514,13 @@ function SprintModal({sections,actions,owners,onApply,onClose}){
       setDiff(parsed);setStage("review");
     }catch(e){setErr("Failed to analyse transcript. Please try again.");setStage("input");}
   }
-
   function apply(){
     setStage("applying");
     let ns=[...sections],na=[...actions];
     (diff.sectionUpdates||[]).forEach(u=>{
       const idx=ns.findIndex(s=>String(s.num)===String(u.num));if(idx===-1)return;
       const s={...ns[idx]},c=u.changes||{};
-      if(c.status!==undefined)s.status=c.status;
-      if(c.flag!==undefined)s.flag=c.flag;
+      if(c.status!==undefined)s.status=c.status;if(c.flag!==undefined)s.flag=c.flag;
       if(c.notes!==undefined)s.notes=s.notes+(s.notes?"\n\n":"")+c.notes;
       if(c.tasksToAdd?.length)s.tasks=[...s.tasks,...c.tasksToAdd];
       if(c.tasksToComplete?.length)s.tasks=s.tasks.map(t=>c.tasksToComplete.includes(t.task)?{...t,status:"Done"}:t);
@@ -397,9 +535,7 @@ function SprintModal({sections,actions,owners,onApply,onClose}){
     (diff.questionsToAdd||[]).forEach((q,i)=>na.push({...q,id:mid2+i+1}));
     onApply(ns,na);onClose();
   }
-
   const cc=(diff?.sectionUpdates||[]).reduce((s,u)=>{const c=u.changes||{};return s+(c.status?1:0)+(c.flag!==undefined?1:0)+(c.notes?1:0)+(c.tasksToAdd?.length||0)+(c.tasksToComplete?.length||0)+(c.tasksToUpdate?.length||0);},(diff?.actionsToComplete?.length||0)+(diff?.actionsToAdd?.length||0)+(diff?.questionsToResolve?.length||0)+(diff?.questionsToAdd?.length||0));
-
   return(
     <div className="modal-bg" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal">
@@ -408,31 +544,22 @@ function SprintModal({sections,actions,owners,onApply,onClose}){
           <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,color:"var(--tt)",lineHeight:1}}>×</button>
         </div>
         {stage==="input"&&<>
-          <p>Paste your sprint review transcript below. Claude will analyse it and show you a preview of all proposed changes before applying them.</p>
+          <p>Paste your sprint review transcript. Claude will analyse it and show a preview before applying any changes.</p>
           <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="Paste transcript here…" style={{width:"100%",height:200,marginBottom:10,fontSize:12,padding:"8px 10px",borderRadius:8,border:"0.5px solid var(--bds)"}}/>
-          {err&&<div style={{color:"#A32D2D",fontSize:12,marginBottom:10}}>⚠ {err}</div>}
+          {err&&<div className="err-msg">{err}</div>}
           <div className="btn-row"><button className="btn-s" onClick={onClose}>Cancel</button><button className="btn-p" onClick={analyse} disabled={!text.trim()}>Analyse →</button></div>
         </>}
         {stage==="thinking"&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14,padding:"2rem 0"}}><Spinner/><div style={{fontSize:13,color:"var(--ts)"}}>Analysing transcript…</div></div>}
         {stage==="review"&&diff&&<>
           <p style={{marginBottom:8}}><strong>Summary:</strong> {diff.summary}</p>
-          <p style={{marginBottom:10,color:"var(--ts)"}}>Found <strong>{cc}</strong> change{cc!==1?"s":""} to apply. Review below then confirm.</p>
+          <p style={{marginBottom:10,color:"var(--ts)"}}>Found <strong>{cc}</strong> change{cc!==1?"s":""} to apply.</p>
           <div className="changes-list">
-            {(diff.sectionUpdates||[]).flatMap((u,i)=>{
-              const s=sections.find(x=>String(x.num)===String(u.num));const c=u.changes||{};const items=[];
-              if(c.status)items.push(`Status → ${c.status}`);
-              if(c.flag!==undefined)items.push(c.flag?`Flag: ${c.flag}`:"Flag cleared");
-              if(c.notes)items.push("Notes updated");
-              (c.tasksToAdd||[]).forEach(t=>items.push(`New task: ${t.task}`));
-              (c.tasksToComplete||[]).forEach(t=>items.push(`Completed: ${t}`));
-              (c.tasksToUpdate||[]).forEach(t=>items.push(`${t.task} → ${t.newStatus}`));
-              return items.map((item,j)=><div key={`s${i}${j}`} className="change-item"><span className="change-tag" style={{background:"#E6F1FB",color:"#185FA5"}}>§{u.num}</span><span>{s?.title} — {item}</span></div>);
-            })}
+            {(diff.sectionUpdates||[]).flatMap((u,i)=>{const s=sections.find(x=>String(x.num)===String(u.num));const c=u.changes||{};const items=[];if(c.status)items.push(`Status → ${c.status}`);if(c.flag!==undefined)items.push(c.flag?`Flag: ${c.flag}`:"Flag cleared");if(c.notes)items.push("Notes updated");(c.tasksToAdd||[]).forEach(t=>items.push(`New task: ${t.task}`));(c.tasksToComplete||[]).forEach(t=>items.push(`Completed: ${t}`));(c.tasksToUpdate||[]).forEach(t=>items.push(`${t.task} → ${t.newStatus}`));return items.map((item,j)=><div key={`s${i}${j}`} className="change-item"><span className="change-tag" style={{background:"#E6F1FB",color:"#185FA5"}}>§{u.num}</span><span>{s?.title} — {item}</span></div>);})}
             {(diff.actionsToComplete||[]).map(id=>{const a=actions.find(x=>x.id===id);return <div key={`ac${id}`} className="change-item"><span className="change-tag" style={{background:"#EAF3DE",color:"#3B6D11"}}>Done</span><span>{a?.action||`Action #${id}`}</span></div>;})}
             {(diff.actionsToAdd||[]).map((a,i)=><div key={`aa${i}`} className="change-item"><span className="change-tag" style={{background:"#FAEEDA",color:"#633806"}}>New</span><span>{a.owner} — {a.action} (due: {a.due})</span></div>)}
             {(diff.questionsToResolve||[]).map(id=>{const q=actions.find(x=>x.id===id);return <div key={`qr${id}`} className="change-item"><span className="change-tag" style={{background:"#EAF3DE",color:"#3B6D11"}}>Resolved</span><span>{q?.action||`Q #${id}`}</span></div>;})}
             {(diff.questionsToAdd||[]).map((q,i)=><div key={`qa${i}`} className="change-item"><span className="change-tag" style={{background:"#EEEDFE",color:"#3C3489"}}>New Q</span><span>{q.action}</span></div>)}
-            {cc===0&&<div className="change-item"><span style={{color:"var(--ts)",fontSize:13}}>No changes detected in this transcript.</span></div>}
+            {cc===0&&<div className="change-item"><span style={{color:"var(--ts)",fontSize:13}}>No changes detected.</span></div>}
           </div>
           <div className="btn-row"><button className="btn-s" onClick={()=>{setStage("input");setDiff(null);}}>← Re-paste</button><button className="btn-s" onClick={onClose}>Cancel</button><button className="btn-p" onClick={apply} disabled={cc===0}>Apply {cc} change{cc!==1?"s":""}</button></div>
         </>}
@@ -442,7 +569,7 @@ function SprintModal({sections,actions,owners,onApply,onClose}){
   );
 }
 
-// ---- Dashboard ----
+// --- Dashboard ---
 function Dashboard({sections,actions,cfg}){
   const {owners}=cfg;
   const total=sections.length,done=sections.filter(s=>s.status==="Done").length;
@@ -478,24 +605,12 @@ function Dashboard({sections,actions,cfg}){
         <div className="card">
           <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>Active tasks</div>
           {actT.length===0&&<div style={{fontSize:12,color:"var(--tt)"}}>No active tasks.</div>}
-          {actT.map((t,i)=>(
-            <div key={i} style={{borderBottom:"0.5px solid var(--bdt)",paddingBottom:8,marginBottom:8}}>
-              <div style={{display:"flex",gap:6,marginBottom:3,flexWrap:"wrap"}}><SPill status={t.status} small/><Pill label={t.prio} bg={PS_FIXED[t.prio]?.bg} text={PS_FIXED[t.prio]?.text}/></div>
-              <div style={{fontSize:12,lineHeight:1.4,marginBottom:2}}>{t.task}</div>
-              <div style={{fontSize:11,color:"var(--tt)"}}>§{t.sn} {t.section}</div>
-            </div>
-          ))}
+          {actT.map((t,i)=>(<div key={i} style={{borderBottom:"0.5px solid var(--bdt)",paddingBottom:8,marginBottom:8}}><div style={{display:"flex",gap:6,marginBottom:3,flexWrap:"wrap"}}><SPill status={t.status} small/><Pill label={t.prio} bg={PS_F[t.prio]?.bg} text={PS_F[t.prio]?.text}/></div><div style={{fontSize:12,lineHeight:1.4,marginBottom:2}}>{t.task}</div><div style={{fontSize:11,color:"var(--tt)"}}>§{t.sn} {t.section}</div></div>))}
         </div>
         <div className="card">
           <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>Open actions</div>
           {openA.length===0&&<div style={{fontSize:12,color:"var(--tt)"}}>All actions complete!</div>}
-          {openA.slice(0,7).map((a,i)=>(
-            <div key={i} style={{borderBottom:"0.5px solid var(--bdt)",paddingBottom:8,marginBottom:8}}>
-              <div style={{display:"flex",gap:6,marginBottom:3,flexWrap:"wrap"}}><span className="pill" style={{fontSize:11,background:(ASC_FIXED[a.status]||"#888")+"22",color:ASC_FIXED[a.status]||"#888"}}>{a.status}</span><span style={{fontSize:11,color:"var(--tt)"}}>{a.due}</span></div>
-              <div style={{fontSize:12,lineHeight:1.4,marginBottom:4}}>{a.action}</div>
-              <OTag owner={a.owner} owners={owners}/>
-            </div>
-          ))}
+          {openA.slice(0,7).map((a,i)=>(<div key={i} style={{borderBottom:"0.5px solid var(--bdt)",paddingBottom:8,marginBottom:8}}><div style={{display:"flex",gap:6,marginBottom:3,flexWrap:"wrap"}}><span className="pill" style={{fontSize:11,background:(ASC_F[a.status]||"#888")+"22",color:ASC_F[a.status]||"#888"}}>{a.status}</span><span style={{fontSize:11,color:"var(--tt)"}}>{a.due}</span></div><div style={{fontSize:12,lineHeight:1.4,marginBottom:4}}>{a.action}</div><OTag owner={a.owner} owners={owners}/></div>))}
           {openA.length>7&&<div style={{fontSize:11,color:"var(--ts)"}}>+{openA.length-7} more in Action Items tab</div>}
         </div>
       </div>
@@ -503,21 +618,9 @@ function Dashboard({sections,actions,cfg}){
         <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>Owner workload</div>
         <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(owners.length,4)},1fr)`,gap:10}}>
           {owners.map(name=>{
-            const d=om[name]||{total:0,done:0,actv:0};
-            const p=d.total>0?Math.round((d.done/d.total)*100):0;
-            const c=ownerColor(name,owners);
+            const d=om[name]||{total:0,done:0,actv:0};const p=d.total>0?Math.round((d.done/d.total)*100):0;const c=oc(name,owners);
             const myA=actions.filter(a=>a.owner.includes(name)&&a.type==="action"&&a.status!=="Done");
-            return(
-              <div key={name} className="card-s" style={{padding:".75rem"}}>
-                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
-                  <div style={{width:24,height:24,borderRadius:"50%",background:c+"22",border:`1.5px solid ${c}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:600,color:c}}>{name[0]}</div>
-                  <span style={{fontSize:13,fontWeight:500}}>{name}</span>
-                </div>
-                <div style={{fontSize:11,color:"var(--ts)",marginBottom:6}}>{d.total} sections · {d.actv} active · {myA.length} actions</div>
-                <div style={{height:5,background:"var(--bp)",borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:c,borderRadius:99}}/></div>
-                <div style={{fontSize:11,color:"var(--tt)",marginTop:3}}>{p}% complete</div>
-              </div>
-            );
+            return(<div key={name} className="card-s" style={{padding:".75rem"}}><div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><div style={{width:24,height:24,borderRadius:"50%",background:c+"22",border:`1.5px solid ${c}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:600,color:c}}>{name[0]}</div><span style={{fontSize:13,fontWeight:500}}>{name}</span></div><div style={{fontSize:11,color:"var(--ts)",marginBottom:6}}>{d.total} sections · {d.actv} active · {myA.length} actions</div><div style={{height:5,background:"var(--bp)",borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:c,borderRadius:99}}/></div><div style={{fontSize:11,color:"var(--tt)",marginTop:3}}>{p}% complete</div></div>);
           })}
         </div>
       </div>
@@ -526,7 +629,7 @@ function Dashboard({sections,actions,cfg}){
   );
 }
 
-// ---- Kanban ----
+// --- Kanban ---
 function Kanban({sections,setSections,cfg}){
   const {statuses,owners}=cfg;
   const di=useRef(null);
@@ -539,42 +642,21 @@ function Kanban({sections,setSections,cfg}){
       <div style={{fontSize:12,color:"var(--ts)",marginBottom:12}}>Drag cards between columns or use the dropdown. Changes sync automatically.</div>
       <div className="kb-board">
         {cols.map(col=>{
-          const cs=SS_FIXED[col]||{bg:"#F1EFE8",text:"#5F5E5A",border:"#B4B2A9"};
-          const colS=sections.filter(s=>s.status===col);
-          return(
-            <div key={col} className="kb-col" style={{background:"var(--bs)"}} onDragOver={onDO} onDrop={e=>onDrop(e,col)}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                <span style={{fontSize:12,fontWeight:500,color:cs.text}}>{col}</span>
-                <span className="pill" style={{fontSize:11,background:cs.bg,color:cs.text,border:`1px solid ${cs.border}`}}>{colS.length}</span>
-              </div>
-              {colS.map(s=>{
-                const gi=sections.findIndex(x=>x.num===s.num);
-                const td=s.tasks.filter(t=>t.status==="Done").length,tp=s.tasks.length>0?Math.round((td/s.tasks.length)*100):0;
-                const oc=ownerColor(s.owner.split(/[+ ]/)[0],owners);
-                return(
-                  <div key={String(s.num)} className="kb-card" style={{background:"var(--bp)"}} draggable onDragStart={e=>onDS(e,gi)}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:5,gap:4}}>
-                      <span style={{fontSize:11,fontWeight:500,lineHeight:1.3}}>§{s.num} {s.title}</span>
-                      <Pill label={s.prio} bg={PS_FIXED[s.prio]?.bg} text={PS_FIXED[s.prio]?.text}/>
-                    </div>
-                    <OTag owner={s.owner} owners={owners}/>
-                    {s.flag&&<div style={{fontSize:10,color:"#A32D2D",background:"#FCEBEB",borderRadius:4,padding:"2px 6px",marginTop:5}}>⚑ Flagged</div>}
-                    <div style={{marginTop:6,fontSize:10,color:"var(--tt)",marginBottom:3}}>{td}/{s.tasks.length} tasks done</div>
-                    <div style={{height:3,background:"var(--bs)",borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",width:`${tp}%`,background:oc,borderRadius:99}}/></div>
-                    <div style={{marginTop:6}}><Sel value={s.status} options={statuses} onChange={v=>{const n=[...sections];n[gi]={...n[gi],status:v};setSections(n);}} small/></div>
-                  </div>
-                );
-              })}
-              {colS.length===0&&<div style={{fontSize:11,color:"var(--tt)",textAlign:"center",padding:"1rem 0",opacity:.4}}>Drop here</div>}
-            </div>
-          );
+          const cs=SS_F[col]||{bg:"#F1EFE8",text:"#5F5E5A",border:"#B4B2A9"};const colS=sections.filter(s=>s.status===col);
+          return(<div key={col} className="kb-col" style={{background:"var(--bs)"}} onDragOver={onDO} onDrop={e=>onDrop(e,col)}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><span style={{fontSize:12,fontWeight:500,color:cs.text}}>{col}</span><span className="pill" style={{fontSize:11,background:cs.bg,color:cs.text,border:`1px solid ${cs.border}`}}>{colS.length}</span></div>
+            {colS.map(s=>{const gi=sections.findIndex(x=>x.num===s.num);const td=s.tasks.filter(t=>t.status==="Done").length,tp=s.tasks.length>0?Math.round((td/s.tasks.length)*100):0;const occ=oc(s.owner.split(/[+ ]/)[0],owners);
+              return(<div key={String(s.num)} className="kb-card" style={{background:"var(--bp)"}} draggable onDragStart={e=>onDS(e,gi)}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:5,gap:4}}><span style={{fontSize:11,fontWeight:500,lineHeight:1.3}}>§{s.num} {s.title}</span><Pill label={s.prio} bg={PS_F[s.prio]?.bg} text={PS_F[s.prio]?.text}/></div><OTag owner={s.owner} owners={owners}/>{s.flag&&<div style={{fontSize:10,color:"#A32D2D",background:"#FCEBEB",borderRadius:4,padding:"2px 6px",marginTop:5}}>⚑ Flagged</div>}<div style={{marginTop:6,fontSize:10,color:"var(--tt)",marginBottom:3}}>{td}/{s.tasks.length} tasks done</div><div style={{height:3,background:"var(--bs)",borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",width:`${tp}%`,background:occ,borderRadius:99}}/></div><div style={{marginTop:6}}><Sel value={s.status} options={statuses} onChange={v=>{const n=[...sections];n[gi]={...n[gi],status:v};setSections(n);}} small/></div></div>);
+            })}
+            {colS.length===0&&<div style={{fontSize:11,color:"var(--tt)",textAlign:"center",padding:"1rem 0",opacity:.4}}>Drop here</div>}
+          </div>);
         })}
       </div>
     </div>
   );
 }
 
-// ---- Project Plan ----
+// --- Project Plan ---
 function ProjectPlan({sections,setSections,cfg}){
   const {statuses,priorities,owners}=cfg;
   const [open,setOpen]=useState(null);
@@ -604,13 +686,7 @@ function ProjectPlan({sections,setSections,cfg}){
               </div>
               {s.flag&&<FlagB text={s.flag}/>}
               <div style={{fontSize:11,color:"var(--ts)",marginBottom:6}}>Tasks</div>
-              {s.tasks.map((t,ti)=>(
-                <div key={ti} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                  <Sel value={t.status} options={statuses} onChange={v=>updT(si,ti,"status",v)} small/>
-                  <Txt value={t.task} onChange={v=>updT(si,ti,"task",v)} style={{fontSize:12}}/>
-                  <button onClick={()=>rmT(si,ti)} style={{fontSize:14,color:"#A32D2D",background:"none",border:"none",padding:"0 4px",flexShrink:0}}>×</button>
-                </div>
-              ))}
+              {s.tasks.map((t,ti)=>(<div key={ti} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><Sel value={t.status} options={statuses} onChange={v=>updT(si,ti,"status",v)} small/><Txt value={t.task} onChange={v=>updT(si,ti,"task",v)} sty={{fontSize:12}}/><button onClick={()=>rmT(si,ti)} style={{fontSize:14,color:"#A32D2D",background:"none",border:"none",padding:"0 4px",flexShrink:0}}>×</button></div>))}
               <button style={{fontSize:12,padding:"4px 12px",borderRadius:6,border:"0.5px solid var(--bds)",background:"var(--bs)",color:"var(--ts)",marginTop:4}} onClick={()=>addT(si)}>+ Add task</button>
               <div style={{marginTop:10}}><div style={{fontSize:11,color:"var(--ts)",marginBottom:4}}>Notes</div><Txt value={s.notes} onChange={v=>upd(si,"notes",v)} multi/></div>
             </div>
@@ -621,7 +697,7 @@ function ProjectPlan({sections,setSections,cfg}){
   );
 }
 
-// ---- Action Items ----
+// --- Action Items ---
 function ActionItems({actions,setActions,cfg}){
   const {owners,action_statuses}=cfg;
   const [editId,setEditId]=useState(null);
@@ -635,9 +711,7 @@ function ActionItems({actions,setActions,cfg}){
   return(
     <div>
       <div style={{display:"flex",gap:4,marginBottom:"1.25rem"}}>
-        {[["action","Action Items"],["question","Open Questions"]].map(([v,l])=>(
-          <button key={v} className={`tab-btn ${view===v?"active":""}`} onClick={()=>setView(v)}>{l}</button>
-        ))}
+        {[["action","Action Items"],["question","Open Questions"]].map(([v,l])=>(<button key={v} className={`tab-btn ${view===v?"active":""}`} onClick={()=>setView(v)}>{l}</button>))}
       </div>
       {view==="action"&&<div className="g4"><SC label="Total" val={ac.length}/><SC label="Urgent" val={ac.filter(a=>a.status==="Urgent").length} color="#A32D2D"/><SC label="Decision needed" val={ac.filter(a=>a.status==="Decision Needed").length} color="#633806"/><SC label="Done" val={ac.filter(a=>a.status==="Done").length} color="#3B6D11"/></div>}
       {view==="question"&&<div className="g3"><SC label="Total" val={qc.length}/><SC label="Open" val={qc.filter(a=>a.status!=="Done").length} color="#3C3489"/><SC label="Resolved" val={qc.filter(a=>a.status==="Done").length} color="#3B6D11"/></div>}
@@ -649,10 +723,10 @@ function ActionItems({actions,setActions,cfg}){
                 {a.type==="question"&&<span className="pill" style={{fontSize:11,background:"#EEEDFE",color:"#3C3489"}}>?</span>}
                 <Sel value={a.status} options={a.type==="question"?["Decision Needed","In Progress","Done"]:action_statuses} onChange={v=>upd(a.id,"status",v)} small/>
                 {editId===a.id?<Sel value={a.owner} options={ownerOpts} onChange={v=>upd(a.id,"owner",v)} small/>:<OTag owner={a.owner} owners={owners}/>}
-                {editId===a.id?<Txt value={a.due} onChange={v=>upd(a.id,"due",v)} style={{fontSize:11,width:100}}/>:<span style={{fontSize:11,color:"var(--tt)"}}>Due: {a.due}</span>}
+                {editId===a.id?<Txt value={a.due} onChange={v=>upd(a.id,"due",v)} sty={{fontSize:11,width:100}}/>:<span style={{fontSize:11,color:"var(--tt)"}}>Due: {a.due}</span>}
               </div>
               {editId===a.id?<Txt value={a.action} onChange={v=>upd(a.id,"action",v)} multi/>:<div style={{fontSize:13,color:a.status==="Done"?"var(--ts)":"var(--tp)",textDecoration:a.status==="Done"?"line-through":"none",lineHeight:1.5}}>{a.action}</div>}
-              {editId===a.id&&a.type==="action"&&<div style={{marginTop:6}}><div style={{fontSize:11,color:"var(--ts)",marginBottom:3}}>Dependency</div><Txt value={a.dep} onChange={v=>upd(a.id,"dep",v)} style={{fontSize:12}}/></div>}
+              {editId===a.id&&a.type==="action"&&<div style={{marginTop:6}}><div style={{fontSize:11,color:"var(--ts)",marginBottom:3}}>Dependency</div><Txt value={a.dep} onChange={v=>upd(a.id,"dep",v)} sty={{fontSize:12}}/></div>}
               {a.dep&&editId!==a.id&&<div style={{fontSize:11,color:"#633806",background:"#FAEEDA",borderRadius:4,padding:"3px 8px",marginTop:6,display:"inline-block"}}>◆ {a.dep}</div>}
             </div>
             <div style={{display:"flex",gap:4,flexShrink:0}}>
@@ -667,7 +741,7 @@ function ActionItems({actions,setActions,cfg}){
   );
 }
 
-// ---- Root ----
+// --- Root ---
 function App(){
   const [user,setUser]=useState(null);
   const [tab,setTab]=useState(0);
@@ -677,25 +751,17 @@ function App(){
   const [loaded,setLoaded]=useState(false);
   const [sync,setSync]=useState("idle");
   const [showImport,setShowImport]=useState(false);
+  const [showChangePw,setShowChangePw]=useState(false);
   const timer=useRef(null);
-  const isAdmin=user?.role==="admin";
-  const TABS=["Dashboard","Kanban","Project Plan","Action Items",...(isAdmin?["⚙ Admin"]:[""])].filter(Boolean);
+
+  useEffect(()=>{const s=sessionStorage.getItem("sep_user");if(s){try{setUser(JSON.parse(s));}catch(e){}}else{setLoaded(true);};},[]);
 
   useEffect(()=>{
-    const stored=sessionStorage.getItem("sep_user");
-    if(stored){try{setUser(JSON.parse(stored));}catch(e){}}
-  },[]);
-
-  useEffect(()=>{
-    if(!user)return;
+    if(!user){setLoaded(false);return;}
     Promise.all([dbGetState(),dbGetConfig()]).then(([state,cfgRows])=>{
       if(state?.sections)setSS(state.sections);
       if(state?.actions)setAS(state.actions);
-      if(cfgRows&&cfgRows.length){
-        const c={...DEF_CFG};
-        cfgRows.forEach(r=>{if(c[r.key]!==undefined)c[r.key]=r.value;});
-        setCfg(c);
-      }
+      if(cfgRows?.length){const c={...DEF_CFG};cfgRows.forEach(r=>{if(c[r.key]!==undefined)c[r.key]=r.value;});setCfg(c);}
       setLoaded(true);
     }).catch(()=>setLoaded(true));
   },[user]);
@@ -703,57 +769,56 @@ function App(){
   const persist=useCallback((s,a)=>{
     if(timer.current)clearTimeout(timer.current);
     setSync("syncing");
-    timer.current=setTimeout(()=>{
-      dbSetState({sections:s,actions:a}).then(()=>{setSync("saved");setTimeout(()=>setSync("idle"),3000);}).catch(()=>setSync("error"));
-    },900);
+    timer.current=setTimeout(()=>{dbSetState({sections:s,actions:a}).then(()=>{setSync("saved");setTimeout(()=>setSync("idle"),3000);}).catch(()=>setSync("error"));},900);
   },[]);
 
   const setSections=v=>{setSS(v);persist(v,actions);};
   const setActions=v=>{setAS(v);persist(sections,v);};
   const applyImport=(ns,na)=>{setSS(ns);setAS(na);persist(ns,na);};
+  function logout(){sessionStorage.removeItem("sep_user");setUser(null);setTab(0);}
 
-  function logout(){sessionStorage.removeItem("sep_user");setUser(null);setLoaded(false);}
+  if(!user||!loaded&&!user)return <LoginScreen onLogin={u=>{setUser(u);}}/>;
+  if(!loaded)return(<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:12}}><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style><Spinner/><div style={{fontSize:14,color:"var(--ts)"}}>Loading workspace…</div></div>);
 
-  if(!user)return <LoginScreen onLogin={u=>{setUser(u);}}/>;
-  if(!loaded)return(
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:12}}>
-      <Spinner/><div style={{fontSize:14,color:"var(--ts)"}}>Loading workspace…</div>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-    </div>
-  );
-
-  const tabIdx=Math.min(tab,TABS.length-1);
+  const isAdmin=user?.role==="admin";
+  const TABS=["Dashboard","Kanban","Project Plan","Action Items","My To-Dos",...(isAdmin?["⚙ Admin"]:[])];
+  const ti=Math.min(tab,TABS.length-1);
 
   return(
     <div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       {showImport&&<SprintModal sections={sections} actions={actions} owners={cfg.owners} onApply={applyImport} onClose={()=>setShowImport(false)}/>}
+      {showChangePw&&<ChangePwModal user={user} onClose={changed=>{setShowChangePw(false);if(changed){logout();}}}/>}
 
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"1.25rem",flexWrap:"wrap",gap:8}}>
         <div>
-          <h1 style={{fontSize:20,fontWeight:500,marginBottom:4}}>SE Playbook — Project Planning Tool</h1>
-          <p style={{fontSize:13,color:"var(--ts)"}}>Intact · Shared workspace</p>
+          <h1 style={{fontSize:20,fontWeight:500,marginBottom:4}}>SE Playbook Project Planner</h1>
+          <p style={{fontSize:13,color:"var(--ts)"}}>Intact Solution Engineering · Shared workspace</p>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
           <SyncDot s={sync}/>
           {isAdmin&&<button onClick={()=>setShowImport(true)} style={{fontSize:13,padding:"7px 14px",borderRadius:8,border:"none",background:"#378ADD",color:"#fff",fontWeight:500}}>📋 Update from sprint</button>}
-          <div style={{display:"flex",alignItems:"center",gap:6,background:"var(--bs)",borderRadius:8,padding:"5px 10px"}}>
-            <div style={{width:22,height:22,borderRadius:"50%",background:ownerColor(user.username,cfg.owners)+"22",border:`1.5px solid ${ownerColor(user.username,cfg.owners)}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:600,color:ownerColor(user.username,cfg.owners)}}>{user.username[0]}</div>
+          <div style={{display:"flex",alignItems:"center",gap:6,background:"var(--bs)",borderRadius:8,padding:"5px 10px",border:"0.5px solid var(--bdt)"}}>
+            <div style={{width:22,height:22,borderRadius:"50%",background:oc(user.username,cfg.owners)+"22",border:`1.5px solid ${oc(user.username,cfg.owners)}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:600,color:oc(user.username,cfg.owners)}}>{user.username[0]}</div>
             <span style={{fontSize:12,fontWeight:500}}>{user.username}</span>
-            <button onClick={logout} style={{fontSize:11,background:"none",border:"none",color:"var(--tt)",padding:"0 0 0 4px"}}>Sign out</button>
+            <span style={{color:"var(--bds)",fontSize:12}}>|</span>
+            <button onClick={()=>setShowChangePw(true)} style={{background:"none",border:"none",fontSize:11,color:"var(--ts)",cursor:"pointer",padding:0}}>Change password</button>
+            <span style={{color:"var(--bds)",fontSize:12}}>|</span>
+            <button onClick={logout} style={{background:"none",border:"none",fontSize:11,color:"var(--tt)",cursor:"pointer",padding:0}}>Sign out</button>
           </div>
         </div>
       </div>
 
       <div style={{display:"flex",gap:4,marginBottom:"1.25rem",flexWrap:"wrap"}}>
-        {TABS.map((t,i)=><button key={t} className={`tab-btn ${tabIdx===i?"active":""}`} onClick={()=>setTab(i)}>{t}</button>)}
+        {TABS.map((t,i)=><button key={t} className={`tab-btn ${ti===i?"active":""}`} onClick={()=>setTab(i)}>{t}</button>)}
       </div>
 
-      {tabIdx===0&&<Dashboard sections={sections} actions={actions} cfg={cfg}/>}
-      {tabIdx===1&&<Kanban sections={sections} setSections={setSections} cfg={cfg}/>}
-      {tabIdx===2&&<ProjectPlan sections={sections} setSections={setSections} cfg={cfg}/>}
-      {tabIdx===3&&<ActionItems actions={actions} setActions={setActions} cfg={cfg}/>}
-      {tabIdx===4&&isAdmin&&<AdminPanel cfg={cfg} setCfg={setCfg} onCfgSave={newCfg=>setCfg(newCfg)}/>}
+      {ti===0&&<Dashboard sections={sections} actions={actions} cfg={cfg}/>}
+      {ti===1&&<Kanban sections={sections} setSections={setSections} cfg={cfg}/>}
+      {ti===2&&<ProjectPlan sections={sections} setSections={setSections} cfg={cfg}/>}
+      {ti===3&&<ActionItems actions={actions} setActions={setActions} cfg={cfg}/>}
+      {ti===4&&<MyTodos user={user} sections={sections} actions={actions} setSections={setSections} setActions={setActions} cfg={cfg}/>}
+      {ti===5&&isAdmin&&<AdminPanel cfg={cfg} setCfg={setCfg}/>}
     </div>
   );
 }
