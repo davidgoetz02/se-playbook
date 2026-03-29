@@ -562,7 +562,7 @@ function AdminPanel({cfg,setCfg,initiatives,setInitiatives}){
   async function delUser(u){if(!confirm(`Remove user "${u}"?`))return;await dbDelUser(u);const us=await dbGetUsers();setUsers(us||[]);flash(`User "${u}" removed.`);}
   async function updPw(u){const p=newPw[u];if(!p)return;await dbSetPw(u,p);setNewPw(prev=>({...prev,[u]:""}));flash(`Password updated for "${u}".`);}
   async function saveCfg(){await Promise.all(Object.keys(lc).map(k=>dbSetConfig(k,lc[k])));setCfg(lc);flash("Configuration saved.");}
-  function addToList(key){const v=addVals[key].trim();if(!v)return;setLc(c=>({...c,[key]:[...c[key],v]}));setAddVals(p=>({...p,[key]:"""}));}
+  function addToList(key){const v=addVals[key].trim();if(!v)return;setLc(c=>({...c,[key]:[...c[key],v]}));setAddVals(p=>({...p,[key]:""}));}
   function rmFromList(key,i){setLc(c=>({...c,[key]:c[key].filter((_,j)=>j!==i)}));}
   async function saveInitiative(){
     if(!newInit.name.trim()){flash("Please enter a name.","err");return;}
@@ -651,7 +651,7 @@ function InitiativeView({initiative,sections,setSections,actions,setActions,cfg,
     {showImport&&<SprintModal sections={sections} actions={actions} owners={ownerOpts} onApply={(ns,na)=>{setSections(ns);setActions(na);}} onClose={()=>setShowImport(false)}/>}
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"1.25rem",flexWrap:"wrap",gap:8}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <button onClick={onBack} style={{background:"none",border:"0.5px solid var(--bds)",borderRadius:var(--r),padding:"5px 10px",fontSize:12,color:"var(--ts)",cursor:"pointer"}}>← All initiatives</button>
+        <button onClick={onBack} style={{background:"none",border:"0.5px solid var(--bds)",borderRadius:"8px",padding:"5px 10px",fontSize:12,color:"var(--ts)",cursor:"pointer"}}>← All initiatives</button>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <div style={{width:32,height:32,borderRadius:8,background:initiative.color+"22",border:`2px solid ${initiative.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>{initiative.icon||"📋"}</div>
           <div><div style={{fontSize:16,fontWeight:500}}>{initiative.name}</div><div style={{fontSize:12,color:"var(--ts)"}}>SE Playbook Project Planner · Intact</div></div>
